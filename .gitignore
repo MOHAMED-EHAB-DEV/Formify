@@ -1,8 +1,8 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # Project Secret Files
-architecture-design.md
-MVP&Architecture.md
+# architecture-design.md
+# MVP&Architecture.md
 
 # dependencies
 /node_modules
