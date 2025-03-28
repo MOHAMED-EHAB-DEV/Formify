@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth/next";
 
-import Header from "@/components/Header";
+import Navbar from "@/components/Navbar";
 import { authOptions } from "@/auth";
 import { getUser } from "@/lib/actions/user";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -23,6 +23,7 @@ export default async function RootLayout({
             <AppSidebar />
             <SidebarTrigger />
             <main className="home-container">
+                <Navbar user={user} />
                 {children}
             </main>
         </SidebarProvider>

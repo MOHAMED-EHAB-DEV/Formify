@@ -123,7 +123,7 @@
 
 @layer utilities {
   .header {
-    @apply min-h-[92px] min-w-full flex-nowrap bg-[#09111F] flex w-full items-center justify-between gap-2 px-4;
+    @apply min-h-[92px] min-w-full flex-nowrap flex w-full items-center justify-between gap-1 pl-4 pr-8;
   }
 
   .home-container {

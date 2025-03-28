@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import { useTheme } from "next-themes";
-import { useState } from "react";
 
 import {
     Sidebar,
@@ -25,12 +24,14 @@ export function AppSidebar() {
         <Sidebar>
             <SidebarHeader>
                 <div>
-                    <Image
-                        src={`/assets/images/logo-${theme}.svg`}
-                        alt="logo"
-                        width={152}
-                        height={152}
-                    />
+                    {theme && (
+                        <Image
+                            src={`/assets/images/logo-${theme}.svg`}
+                            alt="logo"
+                            width={152}
+                            height={152}
+                        />
+                    )}
                 </div>
             </SidebarHeader>
             <SidebarContent>

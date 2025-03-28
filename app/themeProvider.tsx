@@ -8,5 +8,5 @@ export function ThemeProvider({
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  return <NextThemesProvider attribute="class">{children}</NextThemesProvider>
+  return <NextThemesProvider attribute="class" enableSystem>{children}</NextThemesProvider>
 }
