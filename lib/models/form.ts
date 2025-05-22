@@ -1,4 +1,3 @@
-// models/Form.ts
 import mongoose from "mongoose";
 
 const QuestionSchema = new mongoose.Schema({
@@ -29,6 +28,11 @@ const FormSchema = new mongoose.Schema(
     questions: [QuestionSchema],
     responses: [ResponseSchema],
     creatorId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    status: {
+      type: String,
+      enum: ["draft", "published", "archived"],
+      default: "draft",
+    },
   },
   { timestamps: true }
 );

@@ -1,7 +1,8 @@
+'use client';
+
 import React, { ChangeEvent, useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { toast } from "sonner"
-import { revalidatePath } from "next/cache";
+import { toast } from "sonner";
 
 import { useUploadThing } from "@/lib/uploadthing";
 import { Button } from "./ui/button";
@@ -15,10 +16,8 @@ import { Label } from "./ui/label";
 
 const UpdateProfile = ({
     user,
-    setEditing,
 }: {
     user: IUser;
-    setEditing: React.Dispatch<React.SetStateAction<boolean>>;
 }) => {
     const [files, setFiles] = useState<File[]>([]);
     const [loading, setLoading] = useState(false);
@@ -123,7 +122,6 @@ const UpdateProfile = ({
         try {
             const data = await UpdateUser({ image, email, name }, user?.email);
 
-            setEditing(false);
             toast(data?.message as string);
         } catch (error) {
             console.error("Submitting failed:", error);
@@ -173,7 +171,7 @@ const UpdateProfile = ({
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="p-3 w-[90%] h-full border-solid border-[#1F1F23] border-[1px] rounded-md placeholder-[#ffffff99] bg-[#2C3E50] text-white focus:ring-2 focus:ring-[#ffffff33]"
+                    className="p-3 w-[50%] h-[40px] border-solid border-[#1F1F23] border-[1px] rounded-md placeholder-[#ffffff99] bg-[#2C3E50] text-white focus:ring-2 focus:ring-[#ffffff33]"
                     name="name"
                 />
             </div>
@@ -188,14 +186,14 @@ const UpdateProfile = ({
                     type="text"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="p-3 w-[90%] h-full border-solid border-[#1F1F23] border-[1px] rounded-md placeholder-[#ffffff99] bg-[#2C3E50] text-white focus:ring-2 focus:ring-[#ffffff33]"
+                    className="p-3 w-[50%] h-[40px] border-solid border-[#1F1F23] border-[1px] rounded-md placeholder-[#ffffff99] bg-[#2C3E50] text-white focus:ring-2 focus:ring-[#ffffff33]"
                     name="email"
                 />
             </div>
 
             <div className="flex items-center justify-end w-full">
                 <Button
-                    className="flex items-center justify-center"
+                    className="flex cursor-pointer items-center justify-center"
                     disabled={isDisabled}
                     onClick={handleSubmit}
                 >

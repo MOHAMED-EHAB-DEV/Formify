@@ -52,4 +52,30 @@ export async function saveOrUpdateForm(data: SaveFormInput) {
     console.error("Error saving/updating form:", error);
     return { success: false, error: "Internal Server Error" };
   }
+};
+
+export async function getFormById(formId: string) {
+  try {
+    await connectToDatabase();
+
+    const form = await Form.findById(formId);
+    if (!form) return { success: false, error: "Form not found" };
+    return { success: true, form };
+  } catch (error) {
+    console.error("Error fetching form:", error);
+    return { success: false, error: "Internal Server Error" };
+  }
+};
+
+export async function getFormByUserId(userId: string) {
+  try {
+    await connectToDatabase();
+
+    const forms = await Form.find({ creatorId: userId });
+    if (!forms) return { success: false, error: "Forms not found" };
+    return { success: true, forms };
+  } catch (error) {
+    console.error("Error fetching forms:", error);
+    return { success: false, error: "Internal Server Error" };
+  }
 }

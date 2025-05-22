@@ -38,6 +38,8 @@ const Navbar = ({ user, isFormBuilder = false }: { user: IUser, isFormBuilder?: 
           alt="logo"
           width={152}
           height={152}
+          onClick={() => redirect("/dashboard")}
+          className="cursor-pointer"
         />
       ) : (
         <>
