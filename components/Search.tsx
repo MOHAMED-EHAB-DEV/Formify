@@ -40,7 +40,7 @@ export default function Search() {
     };
 
     return (
-        <div className="relative w-64 mx-auto">
+        <div className="relative w-64 mx-auto sm:block hidden">
             <Input
                 type="text"
                 value={query}

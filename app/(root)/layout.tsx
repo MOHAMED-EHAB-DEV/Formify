@@ -19,13 +19,13 @@ export default async function RootLayout({
         redirect("/sign-in");
     }
     return (
-        <SidebarProvider>
-            <AppSidebar />
-            <SidebarTrigger />
-            <main className="home-container">
-                <Navbar user={user} />
-                {children}
-            </main>
-        </SidebarProvider>
+            <SidebarProvider>
+                <AppSidebar />
+                <SidebarTrigger />
+                <main className="home-container">
+                    <Navbar user={user} />
+                    {children}
+                </main>
+            </SidebarProvider>
     );
 }
