@@ -37,11 +37,7 @@ const UpdateProfile = ({
 
     const { startUpload } = useUploadThing("imageUploader", {
         onClientUploadComplete: () => {
-            toast({
-                variant: "successive",
-                description:
-                    "Profile photo uploaded Successfully",
-            });
+            toast("Profile photo uploaded Successfully");
         },
     });
     // const { toast } = useToast();
@@ -57,9 +53,7 @@ const UpdateProfile = ({
             const file = e.target.files[0];
 
             if (!file.type.includes("image")) {
-                toast({
-                    variant: "destructive",
-                    title: "Invalid file type",
+                toast("Invalid file type", {
                     description: "Please select an image file.",
                 });
                 return;
@@ -84,25 +78,18 @@ const UpdateProfile = ({
                     const imageUrl = imgRes[0].url;
                     setImage(imageUrl);
                 } else {
-                    toast({
-                        variant: "destructive",
-                        title: "Uh oh! Something went wrong.",
+                    toast("Uh oh! Something went wrong.", {
                         description: "File upload failed. Please try again.",
-                        action: <ToastAction altText="Try again">Try again</ToastAction>,
                     });
                 }
             } else {
-                toast({
-                    variant: "destructive",
-                    title: "Invalid image",
+                toast("Invalid image", {
                     description: "The selected image is not valid.",
                 });
             }
         } catch (error) {
             console.error("Upload failed:", error);
-            toast({
-                variant: "destructive",
-                title: "Error",
+            toast("Error", {
                 description: "Failed to process the image. Please try again.",
             });
         } finally {
@@ -126,9 +113,7 @@ const UpdateProfile = ({
             setLoading(false);
         } catch (error) {
             console.error("Upload failed:", error);
-            toast({
-                variant: "destructive",
-                title: "Error",
+            toast("Error", {
                 description: "Failed to process the image. Please try again.",
             });
         }
@@ -139,15 +124,10 @@ const UpdateProfile = ({
             const data = await UpdateUser({ image, email, name }, user?.email);
 
             setEditing(false);
-            toast({
-                variant: data?.updated ? "successive" : "destructive",
-                description: data?.message,
-            });
+            toast(data?.message as string);
         } catch (error) {
             console.error("Submitting failed:", error);
-            toast({
-                variant: "destructive",
-                title: "Error",
+            toast("Error", {
                 description: "Failed to process the the data. Please try again.",
             });
         }
