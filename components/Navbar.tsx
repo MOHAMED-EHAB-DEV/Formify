@@ -19,7 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-const Navbar = ({ user, isFormBuilder = false }: { user: IUser, isFormBuilder: Boolean }) => {
+const Navbar = ({ user, isFormBuilder = false }: { user: IUser, isFormBuilder?: Boolean }) => {
   const [Open, setOpen] = useState(false);
   const { theme } = useTheme();
 
