@@ -128,12 +128,12 @@ export default function FormBuilder({ email }: { email?: string }) {
         const payload = {
             title,
             description,
-            creatorId: user?._id,
+            creatorId: user?._id as string,
             questions: questions.map((q) => ({
                 type: q.type,
                 label: q.label,
                 options: q.options || []
-            }))
+            })) as QuestionInput[],
         };
 
         const res = await saveOrUpdateForm(payload);

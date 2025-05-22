@@ -4,13 +4,6 @@ import { connectToDatabase } from "../database";
 import Form from "../models/form";
 import mongoose from "mongoose";
 
-type QuestionInput = {
-  _id?: string;
-  type: "text" | "multiple-choice";
-  label: string;
-  options?: string[];
-};
-
 type SaveFormInput = {
   formId?: string;
   title: string;

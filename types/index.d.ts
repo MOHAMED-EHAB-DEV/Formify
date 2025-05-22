@@ -12,3 +12,10 @@ declare type IUser = {
   createdAt: Date;
   verified: Boolean;
 };
+
+declare type QuestionInput = {
+  _id?: string;
+  type: "text" | "multiple-choice";
+  label: string;
+  options?: string[];
+};
