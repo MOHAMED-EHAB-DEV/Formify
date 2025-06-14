@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 
 const QuestionSchema = new mongoose.Schema({
   _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
+  id: { type: String, required: true, unique: true },
   type: {
     type: String,
     enum: ["text", "multiple-choice"],
@@ -13,9 +14,10 @@ const QuestionSchema = new mongoose.Schema({
 
 const ResponseSchema = new mongoose.Schema({
   submittedAt: { type: Date, default: Date.now },
+  id: { type: String, required: true, unique: true },
   answers: [
     {
-      questionId: { type: mongoose.Schema.Types.ObjectId, required: true },
+      questionId: { type: String, required: true },
       answer: String,
     },
   ],
@@ -23,6 +25,7 @@ const ResponseSchema = new mongoose.Schema({
 
 const FormSchema = new mongoose.Schema(
   {
+    id: { type: String, required: true, unique: true },
     title: { type: String, required: true },
     description: String,
     questions: [QuestionSchema],

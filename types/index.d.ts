@@ -14,7 +14,8 @@ declare type IUser = {
 };
 
 declare type QuestionInput = {
-  _id?: string;
+  _id?: mongoose.Types.ObjectId,
+  id?: string;
   type: "text" | "multiple-choice";
   label: string;
   options?: string[];
@@ -22,6 +23,7 @@ declare type QuestionInput = {
 
 declare type Question = {
   _id: mongoose.Types.ObjectId,
+  id: string,
   type: "text" | "multiple-choice",
   label: String,
   options: [String]
@@ -38,6 +40,7 @@ declare type Response = {
 }
 
 declare type Form = {
+  id: string,
   title: String,
   description: String,
   questions: [Question],

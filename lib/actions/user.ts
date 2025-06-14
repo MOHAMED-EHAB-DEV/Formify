@@ -18,7 +18,20 @@ export async function getUser({ email }: { email: string }) {
     console.log(`Error while getting user by email: ${error}`);
     return null;
   }
-}
+};
+
+export async function getUserById(id: string) {
+  try {
+    await connectToDatabase();
+
+    const user = (await User.findById(id)).toObject();
+    
+    return { success: true, user };
+  } catch (error) {
+    console.log(`Error while getting user by id: ${error}`);
+    return { success: false, error: "Internal Server Error" };
+  }
+};
 
 export const UpdateUser = async (
   {

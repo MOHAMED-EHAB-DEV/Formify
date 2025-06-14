@@ -9,8 +9,9 @@ const page = async () => {
   const session = await getServerSession(authOptions);
   const user = await getUser({ email: session?.user?.email! });
 
-  const forms = (await getFormByUserId(user?._id?.toString() as string)).forms as [Form];
-  return <Forms forms={forms} />;
+  const forms = (await getFormByUserId(user?._id?.toString() as string)).forms;
+  
+  return <Forms forms={forms as Form[]} />;
 }
 
 export default page;

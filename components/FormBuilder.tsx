@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useFormContext, useForm, FormProvider } from 'react-hook-form';
 import {
     DndContext,
@@ -19,6 +19,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { nanoid } from 'nanoid';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { toast } from "sonner"
 import { useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
@@ -37,7 +38,18 @@ interface Question {
     options?: string[];
 }
 
-export default function FormBuilder({ email }: { email?: string }) {
+interface FormBuilderProps {
+    email?: string;
+    initialData?: {
+        id?: string;
+        title: string;
+        description: string;
+        questions: Question[];
+    };
+}
+
+
+export default function FormBuilder({ email, initialData }: FormBuilderProps) {
     const [questions, setQuestions] = useState<Question[]>([]);
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
@@ -100,6 +112,15 @@ export default function FormBuilder({ email }: { email?: string }) {
         );
     };
 
+    useEffect(() => {
+        if (initialData) {
+            setTitle(initialData.title);
+            setDescription(initialData.description);
+            setQuestions(initialData.questions);
+        }
+    }, [initialData]);
+
+
     const sensors = useSensors(useSensor(PointerSensor));
 
     const handleDragEnd = (event: any) => {
@@ -126,10 +147,12 @@ export default function FormBuilder({ email }: { email?: string }) {
     const onSubmit = async (data: any) => {
         const user = await getUser({ email: email as string });
         const payload = {
+            formId: initialData?.id,
             title,
             description,
             creatorId: user?._id as string,
             questions: questions.map((q) => ({
+                id: q.id,
                 type: q.type,
                 label: q.label,
                 options: q.options || []
@@ -137,7 +160,11 @@ export default function FormBuilder({ email }: { email?: string }) {
         };
 
         const res = await saveOrUpdateForm(payload);
-        if (res.success) {
+        if (res.success && res.updated) {
+            toast.success('Form updated successfully');
+            router.push(`/forms/`);
+        } else if (res.success && res.created) {
+            toast.success('Form created successfully');
             router.push(`/forms/${res.formId}`);
         } else {
             alert(res.error || 'Failed to save form');
