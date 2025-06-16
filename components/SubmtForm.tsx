@@ -52,6 +52,12 @@ export default function SubmitForm({
         }
     };
 
+    const handleBack = () => {
+        if (step > 0) {
+            setStep((prev) => prev - 1);
+        }
+    };
+
     if (submitted) {
         return (
             <div className="p-8 text-center w-full min-h-screen h-full flex justify-center items-center">
@@ -127,6 +133,11 @@ export default function SubmitForm({
 
             {/* Sticky Action Buttons */}
             <div className="fixed bottom-4 right-4 sm:right-8 z-50 flex gap-4">
+                {step > 0 && (
+                    <Button onClick={handleBack} variant="outline" className="w-28">
+                        Back
+                    </Button>
+                )}
                 {step < questions.length - 1 ? (
                     <Button onClick={handleNext} className="w-28">
                         Next
