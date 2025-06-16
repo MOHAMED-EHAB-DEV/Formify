@@ -1,7 +1,7 @@
 import { FormDetails } from '@/components/FormDetails';
 import { getFormById } from '@/lib/actions/forms';
 
-interface PageProps {
+type PageProps = {
   params: {
     id: string;
   };
