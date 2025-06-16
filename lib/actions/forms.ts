@@ -142,7 +142,7 @@ export async function submitResponse(
     const form = await Form.findOne({ id: formId });
     if (!form) return { success: false, error: "Form not found" };
 
-    const response = await Form.findByIdAndUpdate(
+    const updatedForm = await Form.findByIdAndUpdate(
       form._id,
       {
         $push: {
@@ -158,6 +158,10 @@ export async function submitResponse(
       { new: true }
     ).lean();
 
+    if (!updatedForm) {
+      return { success: false, error: "Failed to update form" };
+    }
+
     // Create event for form submission
     await createEvent({
       type: "form_submitted",
@@ -169,7 +173,26 @@ export async function submitResponse(
       },
     });
 
-    return { success: true, response };
+    // Emit socket event for real-time updates
+    if (global.io) {
+      const newResponse =
+        updatedForm.responses[updatedForm.responses.length - 1];
+      console.log("Emitting new-response event:", {
+        formId,
+        response: newResponse,
+        totalResponses: updatedForm.responses.length,
+      });
+
+      global.io.to(`form-${formId}`).emit("new-response", {
+        formId,
+        response: newResponse,
+        totalResponses: updatedForm.responses.length,
+      });
+    } else {
+      console.error("Socket.IO instance not found");
+    }
+
+    return { success: true, response: updatedForm };
   } catch (error) {
     console.error("Error submitting response:", error);
     return { success: false, error: "Internal Server Error" };

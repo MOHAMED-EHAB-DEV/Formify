@@ -5,6 +5,8 @@ import { Users, BarChart2, List, User, AlertCircle, Clock } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import MoreOptionsMenu from "./MoreOptionsMenu";
 import { camelize } from "@/lib/utils";
+import { useEffect, useState } from "react";
+import { io, Socket } from "socket.io-client";
 
 interface FormDetailsProps {
     totalResponses: number;
@@ -14,11 +16,87 @@ interface FormDetailsProps {
 }
 
 export function FormDetails({
-    totalResponses,
+    totalResponses: initialTotalResponses,
     id,
-    responses,
+    responses: initialResponses,
     status
 }: FormDetailsProps) {
+    const [responses, setResponses] = useState(initialResponses);
+    const [totalResponses, setTotalResponses] = useState(initialTotalResponses);
+    const [socket, setSocket] = useState<Socket | null>(null);
+    const [isConnected, setIsConnected] = useState(false);
+    const [connectionError, setConnectionError] = useState<string | null>(null);
+
+    useEffect(() => {
+        console.log('Initializing socket connection...');
+
+        // Initialize socket connection
+        const socketInstance = io({
+            path: '/api/socket',
+            reconnectionAttempts: 5,
+            reconnectionDelay: 1000,
+            transports: ['websocket', 'polling'],
+            withCredentials: true,
+            autoConnect: true,
+        });
+
+        socketInstance.on('connect', () => {
+            console.log('Socket connected successfully');
+            setIsConnected(true);
+            setConnectionError(null);
+            // Join the form room
+            console.log('Joining form room:', id);
+            socketInstance.emit('join-form', id);
+        });
+
+        socketInstance.on('disconnect', (reason) => {
+            console.log('Socket disconnected:', reason);
+            setIsConnected(false);
+        });
+
+        socketInstance.on('connect_error', (error) => {
+            console.error('Socket connection error:', error);
+            setIsConnected(false);
+            setConnectionError(error.message);
+        });
+
+        socketInstance.on('error', (error) => {
+            console.error('Socket error:', error);
+            setConnectionError(error.message);
+        });
+
+        // Listen for new responses
+        socketInstance.on('new-response', (data) => {
+            console.log('Received new response:', data);
+            if (data.formId === id) {
+                console.log('Updating responses with new data');
+                setResponses(prev => {
+                    const newResponses = [...prev, data.response];
+                    console.log('New responses array:', newResponses);
+                    return newResponses;
+                });
+                setTotalResponses(data.totalResponses);
+            } else {
+                console.log('Received response for different form:', data.formId);
+            }
+        });
+
+        // Debug: Log all events
+        socketInstance.onAny((eventName, ...args) => {
+            console.log('Socket event received:', eventName, args);
+        });
+
+        setSocket(socketInstance);
+
+        // Cleanup on unmount
+        return () => {
+            console.log('Cleaning up socket connection...');
+            if (socketInstance) {
+                socketInstance.disconnect();
+            }
+        };
+    }, [id]);
+
     const hasResponses = responses && responses.length > 0;
 
     const calculateAverageTime = () => {
