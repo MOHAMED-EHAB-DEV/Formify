@@ -22,6 +22,13 @@ import {
 const Navbar = ({ user, isFormBuilder = false }: { user: IUser, isFormBuilder?: Boolean }) => {
   const [Open, setOpen] = useState(false);
   const { theme } = useTheme();
+  const [image, setImage] = useState(() => {
+    if (!user.image) return "/assets/icons/userProfile.png";
+    if (user.image.includes('_next/image')) {
+      return decodeURIComponent(user.image.split('url=')[1].split('&')[0]);
+    }
+    return user.image as string;
+  });
 
   const path = usePathname().split("/")[1];
 
@@ -58,11 +65,7 @@ const Navbar = ({ user, isFormBuilder = false }: { user: IUser, isFormBuilder?: 
           <DropdownMenuTrigger>
             <div className="w-13 h-13 cursor-pointer">
               <Image
-                src={
-                  user.image
-                    ? (user.image as string)
-                    : "/assets/icons/userProfile.png"
-                }
+                src={image}
                 alt={`${user.name}'s Image`}
                 width={150}
                 height={150}

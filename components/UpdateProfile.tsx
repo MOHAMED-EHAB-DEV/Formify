@@ -23,7 +23,6 @@ const UpdateProfile = ({
     const [loading, setLoading] = useState(false);
     const [image, setImage] = useState(() => {
         if (!user.image) return "/assets/icons/userProfile.png";
-        // If it's a Next.js optimized URL, extract the original URL
         if (user.image.includes('_next/image')) {
             return decodeURIComponent(user.image.split('url=')[1].split('&')[0]);
         }
