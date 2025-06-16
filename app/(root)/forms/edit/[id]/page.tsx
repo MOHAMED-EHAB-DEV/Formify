@@ -4,7 +4,6 @@ import { redirect } from 'next/navigation';
 import { authOptions } from '@/auth';
 import { getFormById } from '@/lib/actions/forms';
 import FormBuilder from '@/components/FormBuilder';
-import Navbar from "@/components/Navbar";
 
 export default async function EditFormPage({ params }: { params: { id: string } }) {
     const session = await getServerSession(authOptions);
@@ -13,7 +12,8 @@ export default async function EditFormPage({ params }: { params: { id: string } 
         redirect('/login');
     }
 
-    const form = (await getFormById(params.id)).form as Form;
+    const formResponse = await getFormById(params.id);
+    const form = formResponse.form as unknown as Form;
 
     if (!form) {
         return (

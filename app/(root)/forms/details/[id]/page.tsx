@@ -1,9 +1,14 @@
 import { FormDetails } from '@/components/FormDetails';
 import { getFormById } from '@/lib/actions/forms';
-import { toast } from 'sonner';
-import { redirect } from 'next/navigation';
 
-const page = async ({ params }: { params: { id: string } }) => {
+interface PageProps {
+  params: {
+    id: string;
+  };
+  searchParams: { [key: string]: string | string[] | undefined };
+}
+
+const page = async ({ params }: PageProps) => {
   const { id } = params;
   const form = (await getFormById(id)).form as unknown as Form;
 
