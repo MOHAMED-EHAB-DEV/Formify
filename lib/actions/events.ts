@@ -11,7 +11,7 @@ export async function getEventsByUserId(userId: string) {
 
     const events = await Event.find({ userId })
       .sort({ timestamp: -1 })
-      .limit(10)
+      .limit(3)
       .populate("userId", "name email")
       .lean();
 
