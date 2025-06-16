@@ -1,14 +1,7 @@
 import { FormDetails } from '@/components/FormDetails';
 import { getFormById } from '@/lib/actions/forms';
 
-type PageProps = {
-  params: {
-    id: string;
-  };
-  searchParams: { [key: string]: string | string[] | undefined };
-}
-
-const page = async ({ params }: PageProps) => {
+const page = async ({ params }: { params: { id: string } }) => {
   const { id } = params;
   const form = (await getFormById(id)).form as unknown as Form;
 
