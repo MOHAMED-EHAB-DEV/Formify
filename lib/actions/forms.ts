@@ -140,3 +140,18 @@ export async function submitResponse(
     return { success: false, error: "Internal Server Error" };
   }
 }
+
+export async function deleteForm(formId: string) {
+  try {
+    await connectToDatabase();
+
+    const form = await Form.findOne({ id: formId });
+    if (!form) return { success: false, error: "Form not found" };
+
+    await Form.deleteOne({ id: formId });
+    return { success: true, message: "Form deleted successfully" };
+  } catch (error) {
+    console.error("Error deleting form:", error);
+    return { success: false, error: "Internal Server Error" };
+  }
+}

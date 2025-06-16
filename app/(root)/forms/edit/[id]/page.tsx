@@ -10,7 +10,7 @@ export default async function EditFormPage({ params }: { params: { id: string } 
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.email) {
-        redirect('/login'); // redirect if not logged in
+        redirect('/login');
     }
 
     const form = (await getFormById(params.id)).form as Form;
@@ -28,7 +28,7 @@ export default async function EditFormPage({ params }: { params: { id: string } 
         title: form.title.toString(),
         description: form.description.toString(),
         questions: form.questions.map((q: any) => ({
-            id: q.id || q._id || '', // fallback in case id is missing
+            id: q.id || q._id || '',
             type: q.type,
             label: q.label,
             options: q.options || [],
@@ -36,8 +36,7 @@ export default async function EditFormPage({ params }: { params: { id: string } 
     };
 
     return (
-        <div className="max-w-full flex flex-col items-center justify-center px-8">
-            <Navbar user={session?.user as unknown as IUser} isFormBuilder={true} />
+        <div className="max-w-full w-full flex flex-col sm:px-8">
             <h1 className="text-2xl font-bold mb-4">Edit Form</h1>
             <div className="max-w-2xl">
                 <FormBuilder email={session.user.email} initialData={initialData} />

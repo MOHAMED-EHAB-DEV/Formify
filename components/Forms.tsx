@@ -1,7 +1,5 @@
 'use client';
 
-import { EllipsisVertical, CirclePlus, Share } from "lucide-react";
-import { toast } from "sonner"
 import { redirect } from "next/navigation";
 
 import { camelize } from "@/lib/utils";
@@ -13,6 +11,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import MoreOptionsMenu from "./MoreOptionsMenu";
 
 const colors = {
     draft: "bg-amber-500",
@@ -39,28 +38,16 @@ const Forms = ({ forms }: { forms: Form[] }) => {
                 </div>
             )}
             {forms.length > 0 ? forms.map((form) => (
-                <>
-                    <div key={form?.id} onClick={() => redirect(`/forms/edit/${form?.id}`)} className="flex cursor-pointer rounded-sm transition px-6 py-3 justify-between w-full hover:bg-[hsla(0,0%,100%,.1)]">
-                        <span>{form.title}</span>
-                        <span>{form.description.slice(0, 5)}{form.description.length > 5 ? "..." : ""}</span>
-                        <div className="flex items-center justify-center gap-2">
-                            <div className={`w-5 h-5 rounded-full ${colors[form?.status as string]}`} />
-                            <span>{camelize(form.status as string)}</span>
-                        </div>
-                        <span>{form.responses.length}</span>
-                        <DropdownMenu>
-                            <DropdownMenuTrigger className="cursor-pointer"><EllipsisVertical /></DropdownMenuTrigger>
-                            <DropdownMenuContent>
-                                <DropdownMenuItem className="flex items-center gap-2 cursor-pointer" onClick={(e) => {
-                                    e.stopPropagation();
-                                    navigator.clipboard.writeText(window.location.href + `/${form?.id}`)
-                                    toast.success("Copied to clipboard");
-                                }}><Share /> Share</DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                <div key={form?.id} onClick={() => redirect(`/forms/details/${form?.id}`)} className="flex cursor-pointer rounded-sm transition px-6 py-3 justify-between w-full hover:bg-[hsla(0,0%,100%,.1)]">
+                    <span>{form.title}</span>
+                    <span>{form.description.slice(0, 5)}{form.description.length > 5 ? "..." : ""}</span>
+                    <div className="flex items-center justify-center gap-2">
+                        <div className={`w-5 h-5 rounded-full ${colors[form?.status as string]}`} />
+                        <span>{camelize(form.status as string)}</span>
                     </div>
-
-                </>
+                    <span>{form.responses.length}</span>
+                    <MoreOptionsMenu id={form?.id} />
+                </div>
             )) : <div className="flex justify-center items-center w-full text-center text-sm text-gray-500 font-bold">No Forms found</div>}
         </div>
     )
