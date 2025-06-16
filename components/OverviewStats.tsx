@@ -18,7 +18,7 @@ export default function OverviewStats({ totalForms, totalSubmissions, completion
                     <BarChart className="w-6 h-6 text-green-500" />
                     <div>
                         <p className="text-lg font-bold">{totalSubmissions}</p>
-                        <p className="text-sm">Total Submissions</p>
+                        <p className="text-sm">Total Submissions(Published, Archived)</p>
                     </div>
                 </CardContent>
             </Card>
