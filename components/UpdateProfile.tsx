@@ -21,9 +21,14 @@ const UpdateProfile = ({
 }) => {
     const [files, setFiles] = useState<File[]>([]);
     const [loading, setLoading] = useState(false);
-    const [image, setImage] = useState(
-        user.image ? (user.image as string) : "/assets/icons/userProfile.png"
-    );
+    const [image, setImage] = useState(() => {
+        if (!user.image) return "/assets/icons/userProfile.png";
+        // If it's a Next.js optimized URL, extract the original URL
+        if (user.image.includes('_next/image')) {
+            return decodeURIComponent(user.image.split('url=')[1].split('&')[0]);
+        }
+        return user.image as string;
+    });
     const [name, setName] = useState(user?.name);
     const [email, setEmail] = useState(user?.email);
     const [isDisabled, setIsDisabled] = useState(true);
