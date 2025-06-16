@@ -73,7 +73,7 @@ const Navbar = ({ user, isFormBuilder = false }: { user: IUser, isFormBuilder?: 
           <DropdownMenuContent className="w-[23.5rem]">
             <DropdownMenuLabel className="flex items-center justify-start py-4 px-5 gap-4">
               <Image
-                src={user.image as string}
+                src={user?.image as string}
                 alt={user.name}
                 width={64}
                 height={64}
