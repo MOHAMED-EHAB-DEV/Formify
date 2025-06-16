@@ -63,7 +63,7 @@ export function FormDetails({
                 <MoreOptionsMenu id={id} status={status} />
             </div>
 
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0 mb-6">
+            <div className="flex flex-col sm:flex-row gap-3 mb-6">
                 <Card className="p-4 sm:p-6 w-full sm:w-1/4">
                     <div className="flex items-center gap-2">
                         <Users className="h-5 w-5 text-muted-foreground" />
