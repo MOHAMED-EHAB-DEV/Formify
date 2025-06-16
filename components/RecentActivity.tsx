@@ -1,42 +1,80 @@
 'use client';
 
-import { useState } from 'react';
-import { ChevronUp, ChevronDown } from 'lucide-react';
-
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { IEvent } from "@/lib/models/event";
+import { formatDistanceToNow } from "date-fns";
 
-export default function RecentActivity() {
-    const [open, setOpen] = useState(false);
+interface EventWithUser extends Omit<IEvent, 'userId'> {
+    userId: {
+        name: string;
+        email: string;
+    };
+}
+
+interface RecentActivityProps {
+    events: EventWithUser[];
+}
+
+export default function RecentActivity({ events }: RecentActivityProps) {
+    const getEventIcon = (type: string) => {
+        switch (type) {
+            case 'form_created':
+                return '📝';
+            case 'form_updated':
+                return '✏️';
+            case 'form_submitted':
+                return '✅';
+            case 'form_deleted':
+                return '🗑️';
+            default:
+                return '📌';
+        }
+    };
+
+    const getEventMessage = (event: EventWithUser) => {
+        switch (event.type) {
+            case 'form_created':
+                return `created form "${event.formTitle}"`;
+            case 'form_updated':
+                return `updated form "${event.formTitle}"`;
+            case 'form_submitted':
+                return `received a submission for "${event.formTitle}"`;
+            case 'form_deleted':
+                return `deleted form "${event.formTitle}"`;
+            default:
+                return 'performed an action';
+        }
+    };
+
     return (
         <Card>
             <CardHeader className='flex justify-between items-center'>
                 <CardTitle>Recent Activity</CardTitle>
-                <DropdownMenu open={open} onOpenChange={(open) => setOpen(open)}>
-                    <DropdownMenuTrigger className='flex items-center justify-center'>Form A {open ? <ChevronUp size={18} /> : <ChevronDown size={18} />}</DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                        <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem>Profile</DropdownMenuItem>
-                        <DropdownMenuItem>Billing</DropdownMenuItem>
-                        <DropdownMenuItem>Team</DropdownMenuItem>
-                        <DropdownMenuItem>Subscription</DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
             </CardHeader>
             <CardContent>
-                <ul className="space-y-2">
-                    <li>✔️ Form "Survey 2024" was submitted.</li>
-                    <li>✏️ "User A" edited Form X.</li>
-                    <li>📅 Deadline for Form Y in 3 days.</li>
-                </ul>
+                <div className="space-y-4">
+                    {events.map((event) => (
+                        <div key={event.id} className="flex items-start gap-4">
+                            <span className="text-xl">{getEventIcon(event.type)}</span>
+                            <div className="flex-1 space-y-1">
+                                <p className="text-sm font-medium leading-none">
+                                    {event.userId.name}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                    {getEventMessage(event)}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                    {formatDistanceToNow(new Date(event.timestamp), { addSuffix: true })}
+                                </p>
+                            </div>
+                        </div>
+                    ))}
+                    {events.length === 0 && (
+                        <p className="text-sm text-muted-foreground text-center py-4">
+                            No recent activity
+                        </p>
+                    )}
+                </div>
             </CardContent>
         </Card>
     );

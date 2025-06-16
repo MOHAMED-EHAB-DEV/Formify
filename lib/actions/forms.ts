@@ -4,6 +4,7 @@ import { nanoid } from "nanoid";
 import { connectToDatabase } from "../database";
 import Form from "../models/form";
 import mongoose from "mongoose";
+import { createEvent } from "./events";
 
 type SaveFormInput = {
   formId?: string;
@@ -34,6 +35,18 @@ export async function saveOrUpdateForm(data: SaveFormInput) {
       }));
 
       await form.save();
+
+      // Create event for form update
+      await createEvent({
+        type: "form_updated",
+        formId: form.id,
+        formTitle: form.title,
+        userId: data.creatorId,
+        metadata: {
+          questionCount: form.questions.length,
+        },
+      });
+
       return { success: true, formId: form._id.toString(), updated: true };
     } else {
       const id = nanoid(10);
@@ -49,6 +62,17 @@ export async function saveOrUpdateForm(data: SaveFormInput) {
           label: q.label,
           options: q.options || [],
         })),
+      });
+
+      // Create event for form creation
+      await createEvent({
+        type: "form_created",
+        formId: newForm.id,
+        formTitle: newForm.title,
+        userId: data.creatorId,
+        metadata: {
+          questionCount: newForm.questions.length,
+        },
       });
 
       return { success: true, formId: newForm.id.toString(), created: true };
@@ -134,6 +158,17 @@ export async function submitResponse(
       { new: true }
     ).lean();
 
+    // Create event for form submission
+    await createEvent({
+      type: "form_submitted",
+      formId: form.id,
+      formTitle: form.title,
+      userId: form.creatorId,
+      metadata: {
+        responseCount: form.responses.length + 1,
+      },
+    });
+
     return { success: true, response };
   } catch (error) {
     console.error("Error submitting response:", error);
@@ -147,6 +182,18 @@ export async function deleteForm(formId: string) {
 
     const form = await Form.findOne({ id: formId });
     if (!form) return { success: false, error: "Form not found" };
+
+    // Create event for form deletion before deleting
+    await createEvent({
+      type: "form_deleted",
+      formId: form.id,
+      formTitle: form.title,
+      userId: form.creatorId,
+      metadata: {
+        questionCount: form.questions.length,
+        responseCount: form.responses?.length || 0,
+      },
+    });
 
     await Form.deleteOne({ id: formId });
     return { success: true, message: "Form deleted successfully" };
@@ -165,6 +212,19 @@ export async function ChangeStatus(formId: string, status: string) {
 
     form.status = status;
     await form.save();
+
+    // Create event for status change
+    await createEvent({
+      type: "form_updated",
+      formId: form.id,
+      formTitle: form.title,
+      userId: form.creatorId,
+      metadata: {
+        status: status,
+        previousStatus: form.status,
+      },
+    });
+
     return { success: true, message: "Form status changed successfully" };
   } catch (error) {
     console.error("Error changing form status:", error);

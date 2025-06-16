@@ -14,7 +14,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-export default function DashboardHeader({ username }: { username: string }) {
+export default function DashboardHeader({ username, activeForms }: { username: string, activeForms: number }) {
     const date = new Date().toDateString();
     return (
         <Card>
@@ -35,7 +35,7 @@ export default function DashboardHeader({ username }: { username: string }) {
                 </DropdownMenu>
             </CardHeader>
             <CardContent>
-                <p>You have 3 active forms.</p>
+                <p>You have {activeForms} active forms.</p>
             </CardContent>
         </Card>
     );
