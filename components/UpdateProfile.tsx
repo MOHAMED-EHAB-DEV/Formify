@@ -120,7 +120,16 @@ const UpdateProfile = ({
 
     const handleSubmit = async () => {
         try {
-            const data = await UpdateUser({ image, email, name }, user?.email);
+            // Extract the original URL if it's a Next.js optimized URL
+            const originalImageUrl = image.includes('_next/image')
+                ? decodeURIComponent(image.split('url=')[1].split('&')[0])
+                : image;
+
+            const data = await UpdateUser({
+                image: originalImageUrl,
+                email,
+                name
+            }, user?.email);
 
             toast(data?.message as string);
         } catch (error) {
