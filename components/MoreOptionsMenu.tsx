@@ -1,15 +1,17 @@
-import { MoreVertical, Share2, Pencil, Trash2 } from 'lucide-react';
+import { MoreVertical, Share2, Pencil, Trash2, Rss, Archive } from 'lucide-react';
 import { redirect } from 'next/navigation';
 import { toast } from 'sonner';
 
 import { deleteForm } from '@/lib/actions/forms';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { ChangeStatus } from '@/lib/actions/forms';
 
 interface MoreOptionsMenuProps {
     id: string;
+    status: string;
 }
 
-const MoreOptionsMenu = ({ id }: MoreOptionsMenuProps) => {
+const MoreOptionsMenu = ({ id, status }: MoreOptionsMenuProps) => {
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -18,6 +20,17 @@ const MoreOptionsMenu = ({ id }: MoreOptionsMenuProps) => {
                 </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+                {status === "published" || status === "draft" ? (
+                    <DropdownMenuItem onClick={() => ChangeStatus(id, "archived")}>
+                        <Archive className="mr-2 h-4 w-4" />
+                        <span>Switch to Archived</span>
+                    </DropdownMenuItem>
+                ) : (
+                    <DropdownMenuItem onClick={() => ChangeStatus(id, "published")}>
+                        <Rss className="mr-2 h-4 w-4" />
+                        <span>Switch to Published</span>
+                    </DropdownMenuItem>
+                )}
                 <DropdownMenuItem onClick={() => redirect(`/forms/edit/${id}`)}>
                     <Pencil className="mr-2 h-4 w-4" />
                     <span>Edit Form</span>

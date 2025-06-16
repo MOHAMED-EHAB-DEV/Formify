@@ -10,6 +10,7 @@ const page = async ({ params }: { params: { id: string } }) => {
       totalResponses={form?.responses?.length || 0}
       id={params.id}
       responses={form?.responses || []}
+      status={form?.status as string}
     />
   )
 }

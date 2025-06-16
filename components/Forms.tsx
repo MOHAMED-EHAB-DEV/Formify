@@ -46,7 +46,7 @@ const Forms = ({ forms }: { forms: Form[] }) => {
                         <span>{camelize(form.status as string)}</span>
                     </div>
                     <span>{form.responses.length}</span>
-                    <MoreOptionsMenu id={form?.id} />
+                    <MoreOptionsMenu id={form?.id} status={form?.status as string} />
                 </div>
             )) : <div className="flex justify-center items-center w-full text-center text-sm text-gray-500 font-bold">No Forms found</div>}
         </div>

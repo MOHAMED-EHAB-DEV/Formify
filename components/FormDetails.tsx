@@ -9,12 +9,14 @@ interface FormDetailsProps {
     totalResponses: number;
     id: string;
     responses: any[];
+    status: string;
 }
 
 export function FormDetails({
     totalResponses,
     id,
-    responses
+    responses,
+    status
 }: FormDetailsProps) {
     const hasResponses = responses && responses.length > 0;
 
@@ -57,7 +59,7 @@ export function FormDetails({
             <div className="flex flex-row justify-between items-start sm:items-center gap-4 sm:gap-0 mb-6">
                 <h2 className="text-xl sm:text-2xl font-semibold tracking-tight">Form Analytics</h2>
 
-                <MoreOptionsMenu id={id} />
+                <MoreOptionsMenu id={id} status={status} />
             </div>
 
             <div className="grid gap-4 w-full mb-6">

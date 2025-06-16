@@ -155,3 +155,19 @@ export async function deleteForm(formId: string) {
     return { success: false, error: "Internal Server Error" };
   }
 }
+
+export async function ChangeStatus(formId: string, status: string) {
+  try {
+    await connectToDatabase();
+
+    const form = await Form.findOne({ id: formId });
+    if (!form) return { success: false, error: "Form not found" };
+
+    form.status = status;
+    await form.save();
+    return { success: true, message: "Form status changed successfully" };
+  } catch (error) {
+    console.error("Error changing form status:", error);
+    return { success: false, error: "Internal Server Error" };
+  }
+}
