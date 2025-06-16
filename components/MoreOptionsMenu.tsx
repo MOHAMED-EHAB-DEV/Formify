@@ -20,7 +20,7 @@ const MoreOptionsMenu = ({ id, status }: MoreOptionsMenuProps) => {
                 </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-                {status === "published" || status === "draft" ? (
+                {status === "published" ? (
                     <DropdownMenuItem onClick={() => ChangeStatus(id, "archived")}>
                         <Archive className="mr-2 h-4 w-4" />
                         <span>Switch to Archived</span>
