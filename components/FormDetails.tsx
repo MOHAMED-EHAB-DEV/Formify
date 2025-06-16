@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Users, BarChart2, List, User, AlertCircle, Clock } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import MoreOptionsMenu from "./MoreOptionsMenu";
+import { camelize } from "@/lib/utils";
 
 interface FormDetailsProps {
     totalResponses: number;
@@ -69,6 +70,13 @@ export function FormDetails({
                         <h3 className="text-sm font-medium">Total Responses</h3>
                     </div>
                     <p className="mt-2 text-xl sm:text-2xl font-bold">{totalResponses}</p>
+                </Card>
+                <Card className="p-4 sm:p-6 w-full sm:w-1/4">
+                    <div className="flex items-center gap-2">
+                        <Users className="h-5 w-5 text-muted-foreground" />
+                        <h3 className="text-sm font-medium">Status</h3>
+                    </div>
+                    <p className="mt-2 text-xl sm:text-2xl font-bold">{camelize(status)}</p>
                 </Card>
             </div>
 
