@@ -23,7 +23,7 @@ export default async function page() {
     const firstName = user?.name.split(" ")[0] as string;
     const Forms = (await getFormByUserId(user?._id as string))?.forms as Form[];
     const activeForms = Forms.filter((form) => form.status === "published").length;
-    const totalSubmissions = Forms.reduce((acc, form) => acc + (form.submissions?.length || 0), 0);
+    const totalSubmissions = Forms.reduce((acc, form) => acc + (form.responses?.length || 0), 0);
     const completionRate = activeForms > 0 ? `${Math.round((totalSubmissions / activeForms) * 100)}%` : "0%";
     const systemStatus = "Online";
     const events = await getEventsByUserId(user?._id as string);
