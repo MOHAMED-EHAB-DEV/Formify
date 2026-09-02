@@ -1,353 +1,516 @@
 'use client';
 
-import { Card } from "@/components/ui/card";
-import { Users, BarChart2, List, User, AlertCircle, Clock } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import MoreOptionsMenu from "./MoreOptionsMenu";
-import { camelize } from "@/lib/utils";
-import { useEffect, useState } from "react";
-import { io, Socket } from "socket.io-client";
+import React, { useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Dropdown, DropdownItem, DropdownSeparator } from '@/components/ui/dropdown';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import {
+  UsersIcon,
+  BarChartIcon,
+  ListIcon,
+  UserIcon,
+  PencilIcon,
+  ShareIcon,
+  TrashIcon,
+  MoreVerticalIcon,
+  ArchiveIcon,
+  RssIcon,
+  ExternalLinkIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  AlertCircleIcon,
+  ClockIcon,
+} from '@/components/ui/svgs/icons';
+import { deleteForm, changeStatus } from '@/actions/forms';
+import { useFormSocket } from '@/hooks/use-form-socket';
+import { formatDate, camelize } from '@/lib/utils';
+import { ShareModal } from '@/components/ShareModal';
+import type { Form, FormResponse, FormStatus } from '@/types';
 
-interface FormDetailsProps {
-    totalResponses: number;
-    id: string;
-    responses: any[];
-    status: string;
-}
+export function FormDetails({ form }: { form: Form }) {
+  const router = useRouter();
 
-export function FormDetails({
-    totalResponses: initialTotalResponses,
-    id,
-    responses: initialResponses,
-    status
-}: FormDetailsProps) {
-    const [responses, setResponses] = useState(initialResponses);
-    const [totalResponses, setTotalResponses] = useState(initialTotalResponses);
-    const [socket, setSocket] = useState<Socket | null>(null);
-    const [isConnected, setIsConnected] = useState(false);
-    const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [responses, setResponses] = useState<FormResponse[]>(form.responses || []);
+  const [currentStatus, setCurrentStatus] = useState<FormStatus>(form.status);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const responsesPerPage = 10;
 
-    useEffect(() => {
-        console.log('Initializing socket connection...');
-
-        // Initialize socket connection
-        const socketInstance = io({
-            path: '/api/socket',
-            reconnectionAttempts: 5,
-            reconnectionDelay: 1000,
-            transports: ['websocket', 'polling'],
-            withCredentials: true,
-            autoConnect: true,
-        });
-
-        socketInstance.on('connect', () => {
-            console.log('Socket connected successfully');
-            setIsConnected(true);
-            setConnectionError(null);
-            // Join the form room
-            console.log('Joining form room:', id);
-            socketInstance.emit('join-form', id);
-        });
-
-        socketInstance.on('disconnect', (reason) => {
-            console.log('Socket disconnected:', reason);
-            setIsConnected(false);
-        });
-
-        socketInstance.on('connect_error', (error) => {
-            console.error('Socket connection error:', error);
-            setIsConnected(false);
-            setConnectionError(error.message);
-        });
-
-        socketInstance.on('error', (error) => {
-            console.error('Socket error:', error);
-            setConnectionError(error.message);
-        });
-
-        // Listen for new responses
-        socketInstance.on('new-response', (data) => {
-            console.log('Received new response:', data);
-            if (data.formId === id) {
-                console.log('Updating responses with new data');
-                setResponses(prev => {
-                    const newResponses = [...prev, data.response];
-                    console.log('New responses array:', newResponses);
-                    return newResponses;
-                });
-                setTotalResponses(data.totalResponses);
-            } else {
-                console.log('Received response for different form:', data.formId);
-            }
-        });
-
-        // Debug: Log all events
-        socketInstance.onAny((eventName, ...args) => {
-            console.log('Socket event received:', eventName, args);
-        });
-
-        setSocket(socketInstance);
-
-        // Cleanup on unmount
-        return () => {
-            console.log('Cleaning up socket connection...');
-            if (socketInstance) {
-                socketInstance.disconnect();
-            }
-        };
-    }, [id]);
-
-    const hasResponses = responses && responses.length > 0;
-
-    const calculateAverageTime = () => {
-        if (!hasResponses || responses.length < 2) return 0;
-
-        const times = responses
-            .map(response => {
-                const submittedAt = new Date(response.submittedAt);
-                return isNaN(submittedAt.getTime()) ? null : submittedAt.getTime();
-            })
-            .filter((time): time is number => time !== null)
-            .sort((a, b) => a - b);
-
-        if (times.length < 2) return 0;
-
-        const timeDifferences = [];
-        for (let i = 1; i < times.length; i++) {
-            const diff = times[i] - times[i - 1];
-            if (diff > 0) {
-                timeDifferences.push(diff);
-            }
+  const { isConnected } = useFormSocket({
+    formId: form.id,
+    onNewResponse: (data) => {
+      setResponses((prev) => {
+        if (data.response?.id && prev.some((r) => r.id === data.response.id)) {
+          return prev;
         }
+        return [data.response, ...prev];
+      });
+      toast.success('New response received in real time!');
+    },
+  });
 
-        if (timeDifferences.length === 0) return 0;
+  const handleCopyLink = () => {
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const shareUrl = `${origin}/forms/${form.id}`;
+    navigator.clipboard.writeText(shareUrl);
+    toast.success('Form link copied to clipboard');
+  };
 
-        const averageTimeMs = timeDifferences.reduce((acc, curr) => acc + curr, 0) / timeDifferences.length;
-        return Math.round(averageTimeMs / (1000 * 60));
-    };
+  const handleStatusChange = async (newStatus: FormStatus) => {
+    try {
+      const res = await changeStatus(form.id, newStatus);
+      if (res.success) {
+        setCurrentStatus(newStatus);
+        toast.success(`Form is now ${newStatus}`);
+      } else {
+        toast.error(res.error);
+      }
+    } catch {
+      toast.error('Failed to update status');
+    }
+  };
 
-    const formatTime = (minutes: number) => {
-        if (!minutes || isNaN(minutes)) return 'No data';
-        if (minutes < 1) return 'Less than a minute';
-        if (minutes === 1) return '1 minute';
-        return `${minutes} minutes`;
-    };
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const res = await deleteForm(form.id);
+      if (res.success) {
+        toast.success('Form deleted successfully');
+        router.push('/forms');
+        router.refresh();
+      } else {
+        toast.error(res.error);
+      }
+    } catch {
+      toast.error('Failed to delete form');
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+    }
+  };
 
-    return (
-        <div className="w-full p-4 sm:p-6 bg-background">
-            <div className="flex flex-row justify-between items-start sm:items-center gap-4 sm:gap-0 mb-6">
-                <h2 className="text-xl sm:text-2xl font-semibold tracking-tight">Form Analytics</h2>
+  const totalResponses = responses.length;
+  const paginatedResponses = responses.slice((currentPage - 1) * responsesPerPage, currentPage * responsesPerPage);
+  const totalPages = Math.ceil(totalResponses / responsesPerPage) || 1;
 
-                <MoreOptionsMenu id={id} status={status} />
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-3 mb-6">
-                <Card className="p-4 sm:p-6 w-full sm:w-1/4">
-                    <div className="flex items-center gap-2">
-                        <Users className="h-5 w-5 text-muted-foreground" />
-                        <h3 className="text-sm font-medium">Total Responses</h3>
-                    </div>
-                    <p className="mt-2 text-xl sm:text-2xl font-bold">{totalResponses}</p>
-                </Card>
-                <Card className="p-4 sm:p-6 w-full sm:w-1/4">
-                    <div className="flex items-center gap-2">
-                        <Users className="h-5 w-5 text-muted-foreground" />
-                        <h3 className="text-sm font-medium">Status</h3>
-                    </div>
-                    <p className="mt-2 text-xl sm:text-2xl font-bold">{camelize(status)}</p>
-                </Card>
-            </div>
-
-            <Tabs defaultValue="summary" className="w-full">
-                <TabsList className="grid w-full grid-cols-3 sm:grid-cols-3 gap-2 sm:gap-0">
-                    <TabsTrigger value="summary" className="flex items-center gap-2">
-                        <BarChart2 className="h-4 w-4" />
-                        <span className="hidden sm:inline">Summary</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="questions" className="flex items-center gap-2">
-                        <List className="h-4 w-4" />
-                        <span className="hidden sm:inline">Questions</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="individuals" className="flex items-center gap-2">
-                        <User className="h-4 w-4" />
-                        <span className="hidden sm:inline">Individuals</span>
-                    </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="summary" className="mt-6">
-                    <Card className="p-4 sm:p-6">
-                        <h3 className="text-lg font-semibold mb-4">Response Summary</h3>
-                        {hasResponses ? (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div className="p-4 bg-muted rounded-lg">
-                                    <p className="text-sm text-muted-foreground">Completion Rate</p>
-                                    <p className="text-xl sm:text-2xl font-bold">{(responses.length / totalResponses * 100).toFixed(1)}%</p>
-                                </div>
-                                <div className="p-4 bg-muted rounded-lg">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <Clock className="h-4 w-4 text-muted-foreground" />
-                                        <p className="text-sm text-muted-foreground">Average Time Between Responses</p>
-                                    </div>
-                                    <p className="text-xl sm:text-2xl font-bold">{formatTime(calculateAverageTime())}</p>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="flex flex-col items-center justify-center py-8 text-center">
-                                <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
-                                <h4 className="text-lg font-medium mb-2">No Responses Yet</h4>
-                                <p className="text-muted-foreground">Share your form to start collecting responses</p>
-                            </div>
-                        )}
-                    </Card>
-                </TabsContent>
-
-                <TabsContent value="questions" className="mt-6">
-                    <Card className="p-4 sm:p-6">
-                        <h3 className="text-lg font-semibold mb-4">Question Analysis</h3>
-                        {hasResponses ? (
-                            <div className="space-y-6 sm:space-y-8">
-                                {Object.values(
-                                    responses.reduce((acc: { [key: string]: { id: string, question: string } }, response) => {
-                                        response.answers.forEach((answer: any) => {
-                                            if (!acc[answer.questionId]) {
-                                                acc[answer.questionId] = {
-                                                    id: answer.questionId,
-                                                    question: answer.question
-                                                };
-                                            }
-                                        });
-                                        return acc;
-                                    }, {})
-                                ).map((question) => {
-                                    const questionResponses = responses
-                                        .map(response => {
-                                            const answer = response.answers.find((a: any) => a.questionId === question.id);
-                                            if (answer) {
-                                                return {
-                                                    ...answer,
-                                                    submittedAt: response.submittedAt
-                                                };
-                                            }
-                                            return null;
-                                        })
-                                        .filter(Boolean);
-
-                                    const formatDate = (dateString: string) => {
-                                        try {
-                                            const date = new Date(dateString);
-                                            if (isNaN(date.getTime())) return 'Invalid date';
-                                            return date.toLocaleDateString('en-US', {
-                                                year: 'numeric',
-                                                month: 'short',
-                                                day: 'numeric',
-                                                hour: '2-digit',
-                                                minute: '2-digit'
-                                            });
-                                        } catch (error) {
-                                            return 'Invalid date';
-                                        }
-                                    };
-
-                                    return (
-                                        <div key={question.id} className="border rounded-lg overflow-hidden">
-                                            <div className="p-4 bg-muted">
-                                                <h4 className="font-medium text-base sm:text-lg">{question.question}</h4>
-                                                <p className="text-sm text-muted-foreground mt-1">
-                                                    {questionResponses.length} {questionResponses.length === 1 ? 'response' : 'responses'}
-                                                </p>
-                                            </div>
-                                            <div className="p-4">
-                                                {questionResponses.length > 0 ? (
-                                                    <div className="space-y-3">
-                                                        {questionResponses.map((response: any, index: number) => (
-                                                            <div key={index} className="p-3 bg-muted/50 rounded-md">
-                                                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
-                                                                    <span className="font-medium">
-                                                                        {response.value || response.answer || 'No answer provided'}
-                                                                    </span>
-                                                                    <span className="text-sm text-muted-foreground">
-                                                                        {formatDate(response.submittedAt)}
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                ) : (
-                                                    <p className="text-sm text-muted-foreground">No responses for this question</p>
-                                                )}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        ) : (
-                            <div className="flex flex-col items-center justify-center py-8 text-center">
-                                <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
-                                <h4 className="text-lg font-medium mb-2">No Question Data Available</h4>
-                                <p className="text-muted-foreground">Question analysis will appear once responses are collected</p>
-                            </div>
-                        )}
-                    </Card>
-                </TabsContent>
-
-                <TabsContent value="individuals" className="mt-6">
-                    <Card className="p-4 sm:p-6">
-                        <h3 className="text-lg font-semibold mb-4">Individual Responses</h3>
-                        {hasResponses ? (
-                            <div className="space-y-4">
-                                {responses.map((response: any, index: number) => {
-                                    const formatDate = (dateString: string) => {
-                                        try {
-                                            const date = new Date(dateString);
-                                            if (isNaN(date.getTime())) return 'Invalid date';
-                                            return date.toLocaleDateString('en-US', {
-                                                year: 'numeric',
-                                                month: 'short',
-                                                day: 'numeric',
-                                                hour: '2-digit',
-                                                minute: '2-digit'
-                                            });
-                                        } catch (error) {
-                                            return 'Invalid date';
-                                        }
-                                    };
-
-                                    return (
-                                        <div key={index} className="p-4 bg-muted rounded-lg">
-                                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0 mb-3">
-                                                <h4 className="font-medium">Response #{index + 1}</h4>
-                                                <span className="text-sm text-muted-foreground">
-                                                    {formatDate(response.submittedAt)}
-                                                </span>
-                                            </div>
-                                            <div className="space-y-2">
-                                                {response.answers?.map((answer: any, ansIndex: number) => (
-                                                    <div key={ansIndex} className="p-3 bg-background rounded-md">
-                                                        <div className="flex flex-col gap-1">
-                                                            <span className="text-sm font-medium text-muted-foreground">
-                                                                {answer.question}
-                                                            </span>
-                                                            <span className="text-sm break-words">
-                                                                {answer.value || answer.answer || 'No answer provided'}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        ) : (
-                            <div className="flex flex-col items-center justify-center py-8 text-center">
-                                <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
-                                <h4 className="text-lg font-medium mb-2">No Individual Responses</h4>
-                                <p className="text-muted-foreground">Individual responses will appear here once people start filling out your form</p>
-                            </div>
-                        )}
-                    </Card>
-                </TabsContent>
-            </Tabs>
+  return (
+    <div className="w-full space-y-6 animate-fade-in">
+      {/* Top Breadcrumb & Controls Bar */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-2xl border border-border bg-card p-4 sm:p-5 shadow-xs">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Link href="/forms" className="hover:text-foreground transition-colors">
+              My Forms
+            </Link>
+            <span>/</span>
+            <span className="font-medium text-foreground truncate max-w-[200px]">
+              {form.title}
+            </span>
+          </div>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-xl font-bold tracking-tight text-foreground">
+              {form.title}
+            </h1>
+            <Badge
+              variant={
+                currentStatus === 'published'
+                  ? 'success'
+                  : currentStatus === 'archived'
+                  ? 'warning'
+                  : 'secondary'
+              }
+              dot
+            >
+              {camelize(currentStatus)}
+            </Badge>
+            {isConnected && (
+              <Badge variant="outline" className="hidden sm:inline-flex text-[10px] text-muted-foreground">
+                <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse-dot me-1" />
+                Live Sync
+              </Badge>
+            )}
+          </div>
         </div>
-    );
+
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <Button type="button" variant="outline" size="sm" onClick={() => setShareModalOpen(true)}>
+            <ShareIcon size={16} aria-hidden="true" />
+            <span className="hidden sm:inline">Share Form</span>
+          </Button>
+
+          <Link href={`/forms/${form.id}`} target="_blank">
+            <Button type="button" variant="outline" size="sm">
+              <ExternalLinkIcon size={16} aria-hidden="true" />
+              <span className="hidden sm:inline">View Public</span>
+            </Button>
+          </Link>
+
+          <Dropdown
+            trigger={
+              <button
+                type="button"
+                aria-label="More options"
+                className="h-9 w-9 flex items-center justify-center rounded-lg border border-border bg-card hover:bg-muted text-foreground transition-colors"
+              >
+                <MoreVerticalIcon size={18} />
+              </button>
+            }
+          >
+            <DropdownItem onClick={() => router.push(`/forms/edit/${form.id}`)}>
+              <PencilIcon size={16} />
+              <span>Edit Questions</span>
+            </DropdownItem>
+            <DropdownSeparator />
+            {currentStatus === 'published' ? (
+              <DropdownItem onClick={() => handleStatusChange('archived')}>
+                <ArchiveIcon size={16} />
+                <span>Archive Form</span>
+              </DropdownItem>
+            ) : (
+              <DropdownItem onClick={() => handleStatusChange('published')}>
+                <RssIcon size={16} />
+                <span>Publish Form</span>
+              </DropdownItem>
+            )}
+            <DropdownSeparator />
+            <DropdownItem destructive onClick={() => setDeleteDialogOpen(true)}>
+              <TrashIcon size={16} />
+              <span>Delete Form</span>
+            </DropdownItem>
+          </Dropdown>
+        </div>
+      </div>
+
+      {/* Metric Stats Cards (Semantic <dl>) */}
+      <dl className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4 sm:p-5">
+            <dt className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <UsersIcon size={16} className="text-primary" />
+              <span>Total Responses</span>
+            </dt>
+            <dd className="mt-2 text-2xl font-bold tracking-tight text-foreground">
+              {totalResponses}
+            </dd>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4 sm:p-5">
+            <dt className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <ListIcon size={16} className="text-primary" />
+              <span>Questions</span>
+            </dt>
+            <dd className="mt-2 text-2xl font-bold tracking-tight text-foreground">
+              {form.questions.length}
+            </dd>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4 sm:p-5">
+            <dt className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <ClockIcon size={16} className="text-primary" />
+              <span>Last Modified</span>
+            </dt>
+            <dd className="mt-2 text-sm font-semibold text-foreground pt-1 truncate">
+              {formatDate(form.updatedAt)}
+            </dd>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4 sm:p-5">
+            <dt className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <BarChartIcon size={16} className="text-primary" />
+              <span>Status</span>
+            </dt>
+            <dd className="mt-2 text-base font-semibold text-foreground pt-0.5">
+              {camelize(currentStatus)}
+            </dd>
+          </CardContent>
+        </Card>
+      </dl>
+
+      {/* Analytics Tabs */}
+      <Tabs defaultValue="summary" className="w-full">
+        <TabsList className="w-full sm:w-auto grid grid-cols-3 sm:inline-flex">
+          <TabsTrigger value="summary">
+            <BarChartIcon size={16} />
+            <span>Summary</span>
+          </TabsTrigger>
+          <TabsTrigger value="questions">
+            <ListIcon size={16} />
+            <span>Questions</span>
+          </TabsTrigger>
+          <TabsTrigger value="individuals">
+            <UserIcon size={16} />
+            <span>Responses ({totalResponses})</span>
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Tab 1: Summary */}
+        <TabsContent value="summary">
+          <Card>
+            <CardContent className="p-5 sm:p-6 space-y-6">
+              <h3 className="text-base font-semibold text-foreground">Activity Summary</h3>
+              {totalResponses > 0 ? (
+                <div className="space-y-4">
+                  <div className="rounded-xl border border-border-subtle bg-muted/20 p-4">
+                    <p className="text-xs text-muted-foreground mb-3 font-semibold uppercase tracking-wider">
+                      Recent Activity Distribution
+                    </p>
+                    <div className="h-32 flex items-end gap-2 pt-4">
+                      {responses.slice(0, 12).reverse().map((r, i) => (
+                        <div key={r.id || i} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
+                          <div
+                            className="w-full max-w-[28px] rounded-t-md bg-primary/80 transition-all hover:bg-primary"
+                            style={{ height: `${Math.max(20, ((i + 1) / Math.min(12, totalResponses)) * 100)}%` }}
+                            title={`Submission on ${formatDate(r.submittedAt)}`}
+                          />
+                          <span className="text-[10px] text-muted-foreground truncate w-full text-center">
+                            #{i + 1}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-16 sm:py-20 px-6 text-center">
+                  <div className="h-14 w-14 rounded-2xl bg-muted/60 flex items-center justify-center text-muted-foreground mb-4">
+                    <AlertCircleIcon size={26} />
+                  </div>
+                  <h4 className="text-base font-semibold text-foreground">No responses yet</h4>
+                  <p className="text-xs text-muted-foreground mt-1 max-w-sm">
+                    Publish and share your form to start collecting responses from users.
+                  </p>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setShareModalOpen(true)} className="mt-5">
+                    <ShareIcon size={14} />
+                    <span>Share Form</span>
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab 2: Question Breakdown */}
+        <TabsContent value="questions">
+          <Card>
+            <CardContent className="p-5 sm:p-6 space-y-5">
+              <h3 className="text-base font-semibold text-foreground">Question Analysis</h3>
+              {form.questions.map((question, qIdx) => {
+                const answersForQ = responses
+                  .flatMap((r) => r.answers)
+                  .filter((a) => a.questionId === question.id);
+
+                return (
+                  <div key={question.id} className="p-4 rounded-xl border border-border-subtle bg-muted/20 space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="space-y-0.5">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                          Question {qIdx + 1} • {camelize(question.type)}
+                        </span>
+                        <h4 className="text-sm font-semibold text-foreground">{question.label}</h4>
+                      </div>
+                      <Badge variant="secondary" className="text-[10px]">
+                        {answersForQ.length} {answersForQ.length === 1 ? 'response' : 'responses'}
+                      </Badge>
+                    </div>
+
+                    {/* Question Answers Display */}
+                    {answersForQ.length > 0 ? (
+                      <div className="space-y-2 pt-2 border-t border-border-subtle">
+                        {question.type === 'multiple-choice' ? (
+                          <div className="space-y-1.5">
+                            {question.options?.map((option, optIdx) => {
+                              const count = answersForQ.filter((a) => {
+                                return a.answer === option;
+                              }).length;
+                              const percentage = answersForQ.length > 0 ? Math.round((count / answersForQ.length) * 100) : 0;
+
+                              return (
+                                <div key={optIdx} className="space-y-1">
+                                  <div className="flex justify-between text-xs text-foreground">
+                                    <span>{option}</span>
+                                    <span className="font-semibold text-muted-foreground">
+                                      {count} ({percentage}%)
+                                    </span>
+                                  </div>
+                                  <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                                    <div
+                                      className="h-full bg-primary rounded-full transition-all duration-500"
+                                      style={{ width: `${percentage}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="max-h-40 overflow-y-auto space-y-1.5 pe-1">
+                            {answersForQ.map((ans, aIdx) => (
+                              <div
+                                key={aIdx}
+                                className="p-2 rounded-lg bg-card border border-border-subtle text-xs text-foreground"
+                              >
+                                {String(ans.answer || '—')}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic">No answers collected for this question yet.</p>
+                    )}
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab 3: Individual Responses */}
+        <TabsContent value="individuals">
+          <Card>
+            <CardContent className="p-5 sm:p-6 space-y-4">
+              <h3 className="text-base font-semibold text-foreground">Individual Responses</h3>
+
+              {totalResponses > 0 ? (
+                <>
+                  <div className="space-y-3">
+                    {paginatedResponses.map((response, rIdx) => {
+                      const absoluteIndex = totalResponses - ((currentPage - 1) * responsesPerPage + rIdx);
+                      return (
+                        <details
+                          key={response.id || rIdx}
+                          className="group rounded-xl border border-border bg-card p-4 transition-colors open:bg-muted/10"
+                        >
+                          <summary className="flex cursor-pointer items-center justify-between text-sm font-semibold text-foreground">
+                            <div className="flex items-center gap-2">
+                              <span>Response #{absoluteIndex}</span>
+                              <span className="text-xs font-normal text-muted-foreground">
+                                · {formatDate(response.submittedAt)}
+                              </span>
+                            </div>
+                            <span className="text-xs font-medium text-primary group-open:rotate-180 transition-transform">
+                              ▼
+                            </span>
+                          </summary>
+
+                          <div className="mt-4 space-y-3 border-t border-border-subtle pt-3">
+                            {form.questions.map((q) => {
+                              const ans = response.answers.find((a) => a.questionId === q.id);
+                              return (
+                                <div key={q.id} className="space-y-1">
+                                  <p className="text-xs font-medium text-muted-foreground">{q.label}</p>
+                                  <p className="text-sm font-semibold text-foreground">
+                                    {ans ? String(ans.answer) : <span className="italic text-muted-foreground">No response</span>}
+                                  </p>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </details>
+                      );
+                    })}
+                  </div>
+
+                  {/* Pagination */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between border-t border-border pt-4">
+                      <p className="text-xs text-muted-foreground">
+                        Showing {(currentPage - 1) * responsesPerPage + 1} to{' '}
+                        {Math.min(currentPage * responsesPerPage, totalResponses)} of {totalResponses}
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={currentPage <= 1}
+                          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                        >
+                          <ChevronLeftIcon size={14} />
+                          <span className="sr-only sm:not-sr-only">Previous</span>
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={currentPage >= totalPages}
+                          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                        >
+                          <span className="sr-only sm:not-sr-only">Next</span>
+                          <ChevronRightIcon size={14} />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-16 sm:py-20 px-6 text-center">
+                  <div className="h-14 w-14 rounded-2xl bg-muted/60 flex items-center justify-center text-muted-foreground mb-4">
+                    <UserIcon size={26} />
+                  </div>
+                  <h4 className="text-base font-semibold text-foreground">No individual responses yet</h4>
+                  <p className="text-xs text-muted-foreground mt-1 max-w-sm">
+                    Individual user submissions will be recorded and displayed here in real time.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Share Modal */}
+      <ShareModal
+        open={shareModalOpen}
+        onOpenChange={setShareModalOpen}
+        url={typeof window !== 'undefined' ? `${window.location.origin}/forms/${form.id}` : ''}
+        title={form.title}
+        description={form.description || 'Share this form to start collecting responses.'}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent onClose={() => setDeleteDialogOpen(false)}>
+          <DialogHeader>
+            <DialogTitle>Delete Form</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete &quot;{form.title}&quot;? This action cannot be undone and will erase all {totalResponses} submissions.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              isLoading={isDeleting}
+              onClick={handleDelete}
+            >
+              Delete Permanently
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
 }

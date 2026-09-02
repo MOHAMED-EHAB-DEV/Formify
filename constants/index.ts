@@ -1,23 +1,22 @@
-import { LayoutDashboard, FileText, Settings } from "lucide-react";
+import { LayoutDashboardIcon, FileTextIcon, SettingsIcon } from '@/components/ui/svgs/icons';
 
-const SidebarLinks = [
-    {
-        id: 0,
-        Icon: LayoutDashboard,
-        text: "Dashboard",
-        to: "/dashboard",
-    },
-    {
-        id: 1,
-        Icon: FileText,
-        text: "My Forms",
-        to: "/forms",
-    },
-    {
-        id: 2,
-        Icon: Settings,
-        text: "Settings",
-        to: "/settings",
-    },
-];
-export { SidebarLinks };
+export const SidebarLinks = [
+  {
+    id: 0,
+    Icon: LayoutDashboardIcon,
+    text: 'Dashboard',
+    to: '/dashboard',
+  },
+  {
+    id: 1,
+    Icon: FileTextIcon,
+    text: 'My Forms',
+    to: '/forms',
+  },
+  {
+    id: 2,
+    Icon: SettingsIcon,
+    text: 'Settings',
+    to: '/settings',
+  },
+] as const;

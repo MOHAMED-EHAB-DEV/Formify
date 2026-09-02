@@ -1,220 +1,274 @@
 'use client';
 
-import React, { ChangeEvent, useEffect, useRef, useState } from "react";
-import Image from "next/image";
-import { toast } from "sonner";
+import React, { useState, useRef } from 'react';
+import Image from 'next/image';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { UserIcon } from '@/components/ui/svgs/icons';
+import { updateProfile, updatePassword } from '@/actions/user';
+import type { IUser } from '@/types';
 
-import { useUploadThing } from "@/lib/uploadthing";
-import { Button } from "./ui/button";
-import { UpdateUser } from "@/lib/actions/user";
-// import { useToast } from "@/hooks/use-toast";
-// import { ToastAction } from "@/components/ui/sonner";
-import { Input } from "@/components/ui/input";
-import { isBase64Image } from "@/lib/utils";
-import Loader from "./Loader";
-import { Label } from "./ui/label";
+export function UpdateProfile({ user }: { user: IUser }) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-const UpdateProfile = ({
-    user,
-}: {
-    user: IUser;
-}) => {
-    const [files, setFiles] = useState<File[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [image, setImage] = useState(() => {
-        if (!user.image) return "/assets/icons/userProfile.png";
-        if (user.image.includes('_next/image')) {
-            return decodeURIComponent(user.image.split('url=')[1].split('&')[0]);
-        }
-        return user.image as string;
-    });
-    const [name, setName] = useState(user?.name);
-    const [email, setEmail] = useState(user?.email);
-    const [isDisabled, setIsDisabled] = useState(true);
+  const [name, setName] = useState(user.name || '');
+  const [imagePreview, setImagePreview] = useState(user.image || '');
+  const [imageBase64, setImageBase64] = useState<string | null>(null);
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
 
-    useEffect(() => {
-        setIsDisabled(
-            user?.image === image && user?.name === name && user?.email === email
-        );
-    }, [image, name, email, user]);
+  // Password state
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
-    const { startUpload } = useUploadThing("imageUploader", {
-        onClientUploadComplete: () => {
-            toast("Profile photo uploaded Successfully");
-        },
-    });
-    // const { toast } = useToast();
-    const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-    const onUploadClick = () => {
-        fileInputRef.current?.click();
+    if (file.size > 4 * 1024 * 1024) {
+      toast.error('Image size cannot exceed 4MB');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result as string;
+      setImagePreview(result);
+      setImageBase64(result);
     };
+    reader.readAsDataURL(file);
+  };
 
-    const handleImage = async (e: ChangeEvent<HTMLInputElement>) => {
-        e.preventDefault();
-        if (e.target.files && e.target.files.length > 0) {
-            const file = e.target.files[0];
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      toast.error('Name cannot be empty');
+      return;
+    }
 
-            if (!file.type.includes("image")) {
-                toast("Invalid file type", {
-                    description: "Please select an image file.",
-                });
-                return;
-            }
+    setIsUpdatingProfile(true);
+    try {
+      const res = await updateProfile({
+        name: name.trim(),
+        image: imageBase64 || imagePreview,
+      });
 
-            setFiles([file]);
+      if (res.success) {
+        toast.success('Profile updated successfully');
+        setImageBase64(null);
+      } else {
+        toast.error(res.error);
+      }
+    } catch {
+      toast.error('Failed to update profile');
+    } finally {
+      setIsUpdatingProfile(false);
+    }
+  };
 
-            await uploadImage(file);
-        }
-    };
+  const handleSavePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentPassword || !newPassword) {
+      toast.error('Please enter current and new password');
+      return;
+    }
 
-    const uploadImage = async (file: File) => {
-        setLoading(true);
-        try {
-            const base64String = await fileToBase64(file);
-            const hasImageChanged = isBase64Image(base64String);
+    if (newPassword !== confirmPassword) {
+      toast.error('New passwords do not match');
+      return;
+    }
 
-            if (hasImageChanged) {
-                const imgRes = await startUpload([file]);
+    if (newPassword.length < 6) {
+      toast.error('New password must be at least 6 characters');
+      return;
+    }
 
-                if (imgRes && imgRes[0]?.url) {
-                    const imageUrl = imgRes[0].url;
-                    setImage(imageUrl);
-                } else {
-                    toast("Uh oh! Something went wrong.", {
-                        description: "File upload failed. Please try again.",
-                    });
-                }
-            } else {
-                toast("Invalid image", {
-                    description: "The selected image is not valid.",
-                });
-            }
-        } catch (error) {
-            console.error("Upload failed:", error);
-            toast("Error", {
-                description: "Failed to process the image. Please try again.",
-            });
-        } finally {
-            setLoading(false);
-        }
-    };
+    setIsUpdatingPassword(true);
+    try {
+      const res = await updatePassword({ currentPassword, newPassword });
+      if (res.success) {
+        toast.success('Password updated successfully');
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+      } else {
+        toast.error(res.error);
+      }
+    } catch {
+      toast.error('Failed to update password');
+    } finally {
+      setIsUpdatingPassword(false);
+    }
+  };
 
-    const fileToBase64 = (file: File): Promise<string> => {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result as string);
-            reader.onerror = (error) => reject(error);
-        });
-    };
+  return (
+    <div className="w-full max-w-2xl space-y-6 animate-fade-in">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">
+          Settings
+        </h1>
+        <p className="text-xs text-muted-foreground mt-1">
+          Manage your personal profile and account credentials.
+        </p>
+      </div>
 
-    const handleRemoveImage = async () => {
-        try {
-            setLoading(true);
-            setImage("/assets/icons/userProfile.png");
-            setLoading(false);
-        } catch (error) {
-            console.error("Upload failed:", error);
-            toast("Error", {
-                description: "Failed to process the image. Please try again.",
-            });
-        }
-    };
+      {/* Profile Info Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Profile Details</CardTitle>
+          <CardDescription>
+            Update your public profile photo and display name.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSaveProfile} className="space-y-5">
+            {/* Avatar Row */}
+            <div className="flex items-center gap-4">
+              <div className="relative h-16 w-16 overflow-hidden rounded-full border border-border bg-muted flex items-center justify-center text-muted-foreground shrink-0">
+                {imagePreview ? (
+                  <Image
+                    src={imagePreview}
+                    alt={user.name || 'User Avatar'}
+                    fill
+                    className="object-cover"
+                    unoptimized
+                  />
+                ) : (
+                  <UserIcon size={28} />
+                )}
+              </div>
 
-    const handleSubmit = async () => {
-        try {
-            // Extract the original URL if it's a Next.js optimized URL
-            const originalImageUrl = image.includes('_next/image')
-                ? decodeURIComponent(image.split('url=')[1].split('&')[0])
-                : image;
-
-            const data = await UpdateUser({
-                image: originalImageUrl,
-                email,
-                name
-            }, user?.email);
-
-            toast(data?.message as string);
-        } catch (error) {
-            console.error("Submitting failed:", error);
-            toast("Error", {
-                description: "Failed to process the the data. Please try again.",
-            });
-        }
-    };
-
-    return (
-        <>
-            <Label
-                htmlFor="image"
-                className="text-center sm:text-left w-full text-zinc-400"
-            >
-                Profile Picture
-            </Label>
-            <div className="flex gap-4 sm:gap-8 items-center w-full">
-                <Image
-                    src={image}
-                    alt={user.name}
-                    width={64}
-                    height={64}
-                    className="object-cover rounded-full"
+              <div className="space-y-1">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  accept="image/*"
+                  className="hidden"
                 />
-                <div className="flex items-center h-fit justify-center gap-2">
-                    {loading && <Loader />}
-                    <Input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={handleImage}
-                        className="hidden"
-                        name="image"
-                    />
-                    <Button onClick={onUploadClick}>Upload</Button>
-                    <Button onClick={handleRemoveImage}>Remove</Button>
-                </div>
-            </div>
-            <Label
-                htmlFor="name"
-                className="text-center sm:text-left w-full text-zinc-400"
-            >
-                Profile Name
-            </Label>
-            <div className="flex items-center w-full h-full">
-                <Input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="p-3 w-[50%] h-[40px] border-solid border-[#1F1F23] border-[1px] rounded-md placeholder-[#ffffff99] bg-[#2C3E50] text-white focus:ring-2 focus:ring-[#ffffff33]"
-                    name="name"
-                />
-            </div>
-            <Label
-                htmlFor="email"
-                className="text-center sm:text-left w-full text-zinc-400"
-            >
-                Profile Email
-            </Label>
-            <div className="flex items-center w-full h-full">
-                <Input
-                    type="text"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="p-3 w-[50%] h-[40px] border-solid border-[#1F1F23] border-[1px] rounded-md placeholder-[#ffffff99] bg-[#2C3E50] text-white focus:ring-2 focus:ring-[#ffffff33]"
-                    name="email"
-                />
-            </div>
-
-            <div className="flex items-center justify-end w-full">
                 <Button
-                    className="flex cursor-pointer items-center justify-center"
-                    disabled={isDisabled}
-                    onClick={handleSubmit}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
                 >
-                    Save Changes
+                  Change Avatar
                 </Button>
+                <p className="text-[11px] text-muted-foreground">
+                  JPG, PNG or WEBP. Max 4MB.
+                </p>
+              </div>
             </div>
-        </>
-    );
-};
 
-export default UpdateProfile;
+            <Separator />
+
+            <div className="space-y-1.5">
+              <Label htmlFor="profile-name" required>
+                Display Name
+              </Label>
+              <Input
+                id="profile-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="profile-email">Email Address</Label>
+              <Input
+                id="profile-email"
+                value={user.email}
+                disabled
+                className="bg-muted text-muted-foreground cursor-not-allowed"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Email address is linked to your account provider ({user.provider}).
+              </p>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <Button type="submit" size="sm" isLoading={isUpdatingProfile}>
+                Save Changes
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+
+      {/* Password Security Card (Only shown for credentials accounts) */}
+      {user.provider === 'credentials' ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Change Password</CardTitle>
+            <CardDescription>
+              Ensure your account is using a long, secure password.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSavePassword} className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="current-pass" required>
+                  Current Password
+                </Label>
+                <Input
+                  id="current-pass"
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="new-pass" required>
+                  New Password
+                </Label>
+                <Input
+                  id="new-pass"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="confirm-pass" required>
+                  Confirm New Password
+                </Label>
+                <Input
+                  id="confirm-pass"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end">
+                <Button type="submit" size="sm" variant="outline" isLoading={isUpdatingPassword}>
+                  Update Password
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>Account Authentication</CardTitle>
+            <CardDescription>
+              Your account is authenticated using <strong>{user.provider}</strong>. Password management is handled by your provider.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      )}
+    </div>
+  );
+}

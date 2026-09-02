@@ -1,46 +1,44 @@
-import { getServerSession } from 'next-auth';
-import { redirect } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
+import { getCurrentUser } from '@/actions/user';
+import { getFormById } from '@/actions/forms';
+import { FormBuilder } from '@/components/FormBuilder';
 
-import { authOptions } from '@/auth';
-import { getFormById } from '@/lib/actions/forms';
-import FormBuilder from '@/components/FormBuilder';
+export const metadata = {
+  title: 'Edit Form',
+};
 
-export default async function EditFormPage({ params }: { params: { id: string } }) {
-    const session = await getServerSession(authOptions);
+export default async function EditFormPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const user = await getCurrentUser();
+  if (!user) {
+    redirect('/sign-in');
+  }
 
-    if (!session?.user?.email) {
-        redirect('/login');
-    }
+  const { id } = await params;
+  const res = await getFormById(id);
 
-    const formResponse = await getFormById(params.id);
-    const form = formResponse.form as unknown as Form;
+  if (!res.success || !res.data?.form) {
+    notFound();
+  }
 
-    if (!form) {
-        return (
-            <div className="flex justify-center items-center h-screen text-xl font-semibold">
-                Form not found.
-            </div>
-        );
-    }
+  const form = res.data.form;
 
-    const initialData = {
-        id: form?.id.toString(),
-        title: form.title.toString(),
-        description: form.description.toString(),
-        questions: form.questions.map((q: any) => ({
-            id: q.id || q._id || '',
-            type: q.type,
-            label: q.label,
-            options: q.options || [],
-        })),
-    };
+  if (form.creatorId !== user._id) {
+    redirect('/forms');
+  }
 
-    return (
-        <div className="max-w-full w-full flex flex-col sm:px-8">
-            <h1 className="text-2xl font-bold mb-4">Edit Form</h1>
-            <div className="max-w-2xl">
-                <FormBuilder email={session.user.email} initialData={initialData} />
-            </div>
-        </div>
-    );
+  return (
+    <FormBuilder
+      initialData={{
+        id: form.id,
+        title: form.title,
+        description: form.description,
+        questions: form.questions,
+        status: form.status,
+      }}
+    />
+  );
 }

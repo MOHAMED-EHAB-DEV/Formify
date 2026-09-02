@@ -1,17 +1,16 @@
-import { getServerSession } from "next-auth/next";
+import { redirect } from 'next/navigation';
+import { getCurrentUser } from '@/actions/user';
+import { UpdateProfile } from '@/components/UpdateProfile';
 
-import UpdateProfile from '@/components/UpdateProfile';
-import { authOptions } from "@/auth";
-import { getUser } from "@/lib/actions/user";
+export const metadata = {
+  title: 'Settings',
+};
 
-const page = async () => {
-  const session = await getServerSession(authOptions);
-  const user = await getUser({ email: session?.user?.email! });
-  return (
-    <div className="flex flex-col gap-5 w-full pr-5">
-      <UpdateProfile user={user as IUser} />
-    </div>
-  )
+export default async function SettingsPage() {
+  const user = await getCurrentUser();
+  if (!user) {
+    redirect('/sign-in');
+  }
+
+  return <UpdateProfile user={user} />;
 }
-
-export default page;

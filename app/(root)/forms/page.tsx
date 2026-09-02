@@ -1,17 +1,20 @@
-import { getServerSession } from "next-auth/next";
+import { redirect } from 'next/navigation';
+import { getCurrentUser } from '@/actions/user';
+import { getFormByUserId } from '@/actions/forms';
+import { FormsList } from '@/components/FormsList';
 
-import { authOptions } from "@/auth";
-import { getUser } from "@/lib/actions/user";
-import { getFormByUserId } from "@/lib/actions/forms";
-import Forms from "@/components/Forms";
+export const metadata = {
+  title: 'My Forms',
+};
 
-const page = async () => {
-  const session = await getServerSession(authOptions);
-  const user = await getUser({ email: session?.user?.email! });
+export default async function FormsPage() {
+  const user = await getCurrentUser();
+  if (!user) {
+    redirect('/sign-in');
+  }
 
-  const forms = (await getFormByUserId(user?._id?.toString() as string)).forms;
-  
-  return <Forms forms={forms as Form[]} />;
+  const formsRes = await getFormByUserId(user._id);
+  const forms = formsRes.success ? formsRes.data.forms : [];
+
+  return <FormsList initialForms={forms} />;
 }
-
-export default page;

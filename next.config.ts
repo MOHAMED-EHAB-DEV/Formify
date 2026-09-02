@@ -1,31 +1,22 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  typescript: {
-    ignoreBuildErrors: true,
-  },
   images: {
     remotePatterns: [
       {
         protocol: "https",
         hostname: "lh3.googleusercontent.com",
-        port: "",
-        pathname: "/a/**",
-        search: "",
+        pathname: "/**",
       },
       {
         protocol: "https",
         hostname: "avatars.githubusercontent.com",
-        port: "",
-        pathname: "/u/**",
-        search: "",
+        pathname: "/**",
       },
       {
         protocol: "https",
-        hostname: "utfs.io",
-        port: "",
+        hostname: "res.cloudinary.com",
         pathname: "/**",
-        search: "",
       },
     ],
   },

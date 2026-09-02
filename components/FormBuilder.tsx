@@ -1,316 +1,357 @@
-'use client'
+'use client';
 
-import { useState, useMemo, useEffect } from 'react';
-import { useFormContext, useForm, FormProvider } from 'react-hook-form';
+import React from 'react';
 import {
-    DndContext,
-    closestCenter,
-    PointerSensor,
-    useSensor,
-    useSensors
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
 } from '@dnd-kit/core';
 import {
-    SortableContext,
-    arrayMove,
-    useSortable,
-    verticalListSortingStrategy
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { nanoid } from 'nanoid';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { toast } from "sonner"
-import { useRouter } from 'next/navigation';
-
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { saveOrUpdateForm } from '@/lib/actions/forms';
-import { getUser } from '@/lib/actions/user';
-
-type QuestionType = 'text' | 'multiple-choice';
-
-interface Question {
-    id: string;
-    type: QuestionType;
-    label: string;
-    options?: string[];
-}
+import { Card, CardContent } from '@/components/ui/card';
+import {
+  PlusIcon,
+  TrashIcon,
+  GripVerticalIcon,
+  FileTextIcon,
+  ListIcon,
+  CheckCircleIcon,
+} from '@/components/ui/svgs/icons';
+import { useFormBuilder } from '@/hooks/use-form-builder';
+import type { Question, FormStatus } from '@/types';
 
 interface FormBuilderProps {
-    email?: string;
-    initialData?: {
-        id?: string;
-        title: string;
-        description: string;
-        questions: Question[];
-    };
+  initialData?: {
+    id?: string;
+    title?: string;
+    description?: string;
+    questions?: Question[];
+    status?: FormStatus;
+  };
 }
 
-
-export default function FormBuilder({ email, initialData }: FormBuilderProps) {
-    const [questions, setQuestions] = useState<Question[]>([]);
-    const [title, setTitle] = useState('');
-    const [description, setDescription] = useState('');
-    const router = useRouter();
-
-    const addQuestion = (type: QuestionType) => {
-        setQuestions((prev) => [
-            ...prev,
-            {
-                id: nanoid(),
-                type,
-                label: '',
-                options: type === 'multiple-choice' ? [''] : undefined
-            }
-        ]);
-    };
-
-    const deleteQuestion = (id: string) => {
-        setQuestions((prev) => prev.filter((q) => q.id !== id));
-    };
-
-    const updateQuestion = (id: string, field: keyof Question, value: any) => {
-        setQuestions((prev) =>
-            prev.map((q) => (q.id === id ? { ...q, [field]: value } : q))
-        );
-    };
-
-    const updateOption = (qid: string, index: number, value: string) => {
-        setQuestions((prev) =>
-            prev.map((q) =>
-                q.id === qid && q.options
-                    ? {
-                        ...q,
-                        options: q.options.map((opt, i) => (i === index ? value : opt))
-                    }
-                    : q
-            )
-        );
-    };
-
-    const addOption = (qid: string) => {
-        setQuestions((prev) =>
-            prev.map((q) =>
-                q.id === qid && q.options ? { ...q, options: [...q.options, ''] } : q
-            )
-        );
-    };
-
-    const changeQuestionType = (id: string) => {
-        setQuestions((prev) =>
-            prev.map((q) =>
-                q.id === id
-                    ? {
-                        ...q,
-                        type: q.type === 'text' ? 'multiple-choice' : 'text',
-                        options: q.type === 'text' ? [''] : undefined
-                    }
-                    : q
-            )
-        );
-    };
-
-    useEffect(() => {
-        if (initialData) {
-            setTitle(initialData.title);
-            setDescription(initialData.description);
-            setQuestions(initialData.questions);
-        }
-    }, [initialData]);
-
-
-    const sensors = useSensors(useSensor(PointerSensor));
-
-    const handleDragEnd = (event: any) => {
-        const { active, over } = event;
-        if (active.id !== over?.id) return;
-        const oldIndex = questions.findIndex((q) => q.id === active.id);
-        const newIndex = questions.findIndex((q) => q.id === over.id);
-        setQuestions((items) => arrayMove(items, oldIndex, newIndex));
-    };
-
-    const schema = useMemo(() => {
-        const shape: Record<string, z.ZodTypeAny> = {};
-        for (const q of questions) {
-            shape[q.id] = z.string().min(1, 'Required');
-        }
-        return z.object(shape);
-    }, [questions]);
-
-    const form = useForm({
-        resolver: zodResolver(schema),
-        mode: 'onSubmit'
-    });
-
-    const onSubmit = async (data: any) => {
-        const user = await getUser({ email: email as string });
-        const payload = {
-            formId: initialData?.id,
-            title,
-            description,
-            creatorId: user?._id as string,
-            questions: questions.map((q) => ({
-                id: q.id,
-                type: q.type,
-                label: q.label,
-                options: q.options || []
-            })) as QuestionInput[],
-        };
-
-        const res = await saveOrUpdateForm(payload);
-        if (res.success && res.updated) {
-            toast.success('Form updated successfully');
-            router.push(`/forms/`);
-        } else if (res.success && res.created) {
-            toast.success('Form created successfully');
-            router.push(`/forms/${res.formId}`);
-        } else {
-            alert(res.error || 'Failed to save form');
-        }
-    };
-
-    return (
-        <FormProvider {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex flex-col items-center w-full space-y-8">
-                    <div className="w-full max-w-3xl">
-                        <Input
-                            placeholder="Form Title"
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
-                            className="text-lg sm:text-xl w-full"
-                        />
-                        <Textarea
-                            placeholder="Description"
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            className="min-h-[100px] w-full mt-4"
-                        />
-                    </div>
-
-                    <div className="flex flex-col sm:flex-row w-full max-w-3xl gap-4">
-                        <Button onClick={() => addQuestion('text')} type="button" className="w-full sm:w-1/2">
-                            Add Text
-                        </Button>
-                        <Button onClick={() => addQuestion('multiple-choice')} type="button" className="w-full sm:w-1/2">
-                            Add MCQ
-                        </Button>
-                    </div>
-                </div>
-
-                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                    <SortableContext items={questions.map((q) => q.id)} strategy={verticalListSortingStrategy}>
-                        <div className="space-y-6 max-w-3xl mx-auto">
-                            {questions.map((q) => (
-                                <SortableQuestionCard
-                                    key={q.id}
-                                    question={q}
-                                    updateQuestion={updateQuestion}
-                                    updateOption={updateOption}
-                                    addOption={addOption}
-                                    deleteQuestion={deleteQuestion}
-                                    changeType={changeQuestionType}
-                                />
-                            ))}
-                        </div>
-                    </SortableContext>
-                </DndContext>
-
-                <div className="flex justify-center w-full">
-                    <Button type="submit" onClick={onSubmit} className="w-full max-w-3xl">
-                        Submit
-                    </Button>
-                </div>
-            </form>
-        </FormProvider>
-    );
-}
-
-function SortableQuestionCard({
-    question,
-    updateQuestion,
-    updateOption,
-    addOption,
+export function FormBuilder({ initialData }: FormBuilderProps) {
+  const {
+    title,
+    setTitle,
+    description,
+    setDescription,
+    questions,
+    isSaving,
+    addQuestion,
     deleteQuestion,
-    changeType
-}: {
-    question: Question;
-    updateQuestion: (id: string, field: keyof Question, value: any) => void;
-    updateOption: (qid: string, index: number, value: string) => void;
-    addOption: (qid: string) => void;
-    deleteQuestion: (id: string) => void;
-    changeType: (id: string) => void;
-}) {
-    const {
-        attributes,
-        listeners,
-        setNodeRef,
-        transform,
-        transition
-    } = useSortable({ id: question.id });
+    updateQuestionLabel,
+    changeQuestionType,
+    addOption,
+    updateOption,
+    deleteOption,
+    handleDragEnd,
+    handleSave,
+  } = useFormBuilder(initialData);
 
-    const style = {
-        transform: CSS.Transform.toString(transform),
-        transition
-    };
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    })
+  );
 
-    const { register } = useFormContext();
+  return (
+    <div className="w-full space-y-6 animate-fade-in">
+      {/* Action Header Bar */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-2xl border border-border bg-card p-4 sm:p-5 shadow-xs">
+        <div>
+          <h2 className="text-base font-semibold text-foreground">
+            {initialData?.id ? 'Edit Form' : 'Form Studio'}
+          </h2>
+          <p className="text-xs text-muted-foreground">
+            Configure questions on the left; view respondent layout on the right.
+          </p>
+        </div>
+        <div className="flex items-center gap-2.5 w-full sm:w-auto">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="flex-1 sm:flex-none"
+            isLoading={isSaving}
+            onClick={() => handleSave('draft')}
+          >
+            Save Draft
+          </Button>
+          <Button
+            type="button"
+            variant="default"
+            size="sm"
+            className="flex-1 sm:flex-none"
+            isLoading={isSaving}
+            onClick={() => handleSave('published')}
+          >
+            <CheckCircleIcon size={16} aria-hidden="true" />
+            <span>Publish Form</span>
+          </Button>
+        </div>
+      </div>
 
-    return (
-        <Card ref={setNodeRef} style={style} className="cursor-default w-full">
-            <CardContent className="space-y-6 py-6">
-                <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                    <Input
-                        placeholder="Enter question..."
-                        value={question.label}
-                        onChange={(e) => updateQuestion(question.id, 'label', e.target.value)}
-                        className="w-full"
-                    />
+      {/* Split Panel Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Left Panel: Builder */}
+        <div className="lg:col-span-7 space-y-5">
+          <Card>
+            <CardContent className="p-5 sm:p-6 space-y-4">
+              <div className="space-y-1.5">
+                <label htmlFor="form-title" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Form Title <span className="text-destructive">*</span>
+                </label>
+                <Input
+                  id="form-title"
+                  placeholder="e.g. Product Feedback Survey"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="text-base font-medium"
+                />
+              </div>
 
-                    <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-                        <Button variant="ghost" type="button" {...attributes} {...listeners} className="w-full sm:w-auto">
-                            ⠿
-                        </Button>
-
-                        <Button variant="outline" type="button" onClick={() => changeType(question.id)} className="w-full sm:w-auto">
-                            Switch Type
-                        </Button>
-                        <Button variant="destructive" type="button" onClick={() => deleteQuestion(question.id)} className="w-full sm:w-auto">
-                            Delete
-                        </Button>
-                    </div>
-                </div>
-
-                {question.type === 'text' && (
-                    <Input
-                        {...register(question.id)}
-                        placeholder="User response..."
-                        className="w-full"
-                    />
-                )}
-
-                {question.type === 'multiple-choice' && (
-                    <div className="space-y-4">
-                        {question.options?.map((opt, idx) => (
-                            <Input
-                                key={idx}
-                                value={opt}
-                                onChange={(e) => updateOption(question.id, idx, e.target.value)}
-                                placeholder={`Option ${idx + 1}`}
-                                className="w-full"
-                            />
-                        ))}
-                    </div>
-                )}
-
-                {question.type === 'multiple-choice' && (
-                    <Button variant="outline" size="sm" type="button" onClick={() => addOption(question.id)} className="w-full sm:w-auto">
-                        Add Option
-                    </Button>
-                )}
+              <div className="space-y-1.5">
+                <label htmlFor="form-description" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Description (Optional)
+                </label>
+                <Textarea
+                  id="form-description"
+                  placeholder="Tell respondents what this form is for..."
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="min-h-[80px]"
+                />
+              </div>
             </CardContent>
-        </Card>
-    );
+          </Card>
+
+          {/* Question Cards List with DnD */}
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={questions.map((q) => q.id)} strategy={verticalListSortingStrategy}>
+              <div className="space-y-4">
+                {questions.map((question, index) => (
+                  <SortableQuestionItem
+                    key={question.id}
+                    question={question}
+                    index={index}
+                    onUpdateLabel={updateQuestionLabel}
+                    onChangeType={changeQuestionType}
+                    onDelete={deleteQuestion}
+                    onAddOption={addOption}
+                    onUpdateOption={updateOption}
+                    onDeleteOption={deleteOption}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+
+          {/* Add Question Actions */}
+          <div className="flex flex-col sm:flex-row gap-3 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => addQuestion('text')}
+              className="flex-1 border-dashed"
+            >
+              <FileTextIcon size={16} aria-hidden="true" />
+              <span>Add Short Answer</span>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => addQuestion('multiple-choice')}
+              className="flex-1 border-dashed"
+            >
+              <ListIcon size={16} aria-hidden="true" />
+              <span>Add Multiple Choice</span>
+            </Button>
+          </div>
+        </div>
+
+        {/* Right Panel: Live Preview */}
+        <div className="lg:col-span-5 lg:sticky lg:top-20 space-y-4">
+          <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-xs">
+            <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
+              <span className="text-xs font-bold uppercase tracking-wider text-primary">
+                Live Preview
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {questions.length} {questions.length === 1 ? 'Question' : 'Questions'}
+              </span>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-lg font-bold text-foreground">
+                  {title || 'Untitled Form'}
+                </h3>
+                {description && (
+                  <p className="mt-1 text-sm text-muted-foreground whitespace-pre-wrap">
+                    {description}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-4 pt-2">
+                {questions.map((q, idx) => (
+                  <div key={q.id} className="rounded-xl border border-border-subtle bg-muted/30 p-4 space-y-2">
+                    <p className="text-sm font-semibold text-foreground">
+                      {idx + 1}. {q.label || <span className="italic text-muted-foreground">Untitled question</span>}
+                    </p>
+
+                    {q.type === 'text' ? (
+                      <div className="h-9 w-full rounded-md border border-input bg-card px-3 py-2 text-xs text-muted-foreground">
+                        User text response...
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5 pt-1">
+                        {(q.options || []).map((opt, optIdx) => (
+                          <div key={optIdx} className="flex items-center gap-2.5 text-xs text-foreground">
+                            <span className="h-3.5 w-3.5 rounded-full border border-primary/40 bg-card shrink-0" />
+                            <span>{opt || `Option ${optIdx + 1}`}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SortableQuestionItem({
+  question,
+  index,
+  onUpdateLabel,
+  onChangeType,
+  onDelete,
+  onAddOption,
+  onUpdateOption,
+  onDeleteOption,
+}: {
+  question: Question;
+  index: number;
+  onUpdateLabel: (id: string, label: string) => void;
+  onChangeType: (id: string, type: 'text' | 'multiple-choice') => void;
+  onDelete: (id: string) => void;
+  onAddOption: (id: string) => void;
+  onUpdateOption: (id: string, index: number, val: string) => void;
+  onDeleteOption: (id: string, index: number) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: question.id,
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.6 : 1,
+  };
+
+  return (
+    <Card ref={setNodeRef} style={style} className="overflow-hidden">
+      <CardContent className="p-4 sm:p-5 space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              {...attributes}
+              {...listeners}
+              aria-label="Drag to reorder"
+              className="cursor-grab active:cursor-grabbing p-1 text-muted-foreground hover:text-foreground rounded-md transition-colors"
+            >
+              <GripVerticalIcon size={18} />
+            </button>
+            <span className="text-xs font-semibold text-muted-foreground">
+              Q{index + 1}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <select
+              value={question.type}
+              onChange={(e) => onChangeType(question.id, e.target.value as 'text' | 'multiple-choice')}
+              className="h-8 rounded-md border border-input bg-card px-2 text-xs font-medium text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <option value="text">Short Answer</option>
+              <option value="multiple-choice">Multiple Choice</option>
+            </select>
+
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => onDelete(question.id)}
+              aria-label="Delete question"
+              className="text-muted-foreground hover:text-destructive h-8 px-2"
+            >
+              <TrashIcon size={16} />
+            </Button>
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Input
+            placeholder="Type your question here..."
+            value={question.label}
+            onChange={(e) => onUpdateLabel(question.id, e.target.value)}
+            className="font-medium"
+          />
+        </div>
+
+        {question.type === 'multiple-choice' && (
+          <div className="space-y-2.5 ps-2 border-s-2 border-border-subtle pt-1">
+            <label className="text-xs font-semibold text-muted-foreground">Options</label>
+            {(question.options || []).map((option, optIdx) => (
+              <div key={optIdx} className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-muted-foreground/50 shrink-0" />
+                <Input
+                  value={option}
+                  onChange={(e) => onUpdateOption(question.id, optIdx, e.target.value)}
+                  placeholder={`Option ${optIdx + 1}`}
+                  className="h-9 text-xs"
+                />
+                <button
+                  type="button"
+                  onClick={() => onDeleteOption(question.id, optIdx)}
+                  aria-label={`Remove option ${optIdx + 1}`}
+                  className="p-1 text-muted-foreground hover:text-destructive rounded-md"
+                >
+                  <TrashIcon size={14} />
+                </button>
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => onAddOption(question.id)}
+              className="h-8 text-xs text-primary font-medium ps-0 hover:bg-transparent hover:underline"
+            >
+              <PlusIcon size={14} aria-hidden="true" />
+              <span>Add Option</span>
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
 }

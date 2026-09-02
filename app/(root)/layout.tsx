@@ -1,31 +1,34 @@
-import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth/next";
+import { redirect } from 'next/navigation';
+import { getCurrentUser } from '@/actions/user';
+import { Sidebar } from '@/components/Sidebar';
+import { Topbar } from '@/components/Topbar';
+import { SocketProvider } from '@/context/socket-context';
 
-import Navbar from "@/components/Navbar";
-import { authOptions } from "@/auth";
-import { getUser } from "@/lib/actions/user";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/Sidebar";
+export default async function RootAppLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const user = await getCurrentUser();
 
-export default async function RootLayout({
-    children,
-}: Readonly<{
-    children: React.ReactNode;
-}>) {
-    const session = await getServerSession(authOptions);
-    const user = await getUser({ email: session?.user?.email! });
+  if (!user) {
+    redirect('/sign-in');
+  }
 
-    if (!user) {
-        redirect("/sign-in");
-    }
-    return (
-            <SidebarProvider>
-                <AppSidebar />
-                <SidebarTrigger />
-                <main className="home-container">
-                    <Navbar user={user} />
-                    {children}
-                </main>
-            </SidebarProvider>
-    );
+  return (
+    <SocketProvider>
+      <div className="flex min-h-screen bg-background text-foreground">
+        {/* Desktop Sidebar */}
+        <Sidebar user={user} />
+
+        {/* Main Content Column */}
+        <div className="flex-1 flex flex-col min-w-0 md:ps-60">
+          <Topbar user={user} />
+          <main id="main-content" className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+            {children}
+          </main>
+        </div>
+      </div>
+    </SocketProvider>
+  );
 }

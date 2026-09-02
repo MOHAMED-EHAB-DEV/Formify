@@ -1,61 +1,58 @@
-"use client"
+'use client';
 
-import * as React from "react"
-import * as TooltipPrimitive from "@radix-ui/react-tooltip"
+import React, { useState, type ReactNode, type ReactElement } from 'react';
+import { useFloating, type FloatingPlacement } from '@/hooks/use-floating';
+import { Portal } from '@/components/ui/portal';
+import { cn } from '@/lib/utils';
 
-import { cn } from "@/lib/utils"
-
-function TooltipProvider({
-  delayDuration = 0,
-  ...props
-}: React.ComponentProps<typeof TooltipPrimitive.Provider>) {
-  return (
-    <TooltipPrimitive.Provider
-      data-slot="tooltip-provider"
-      delayDuration={delayDuration}
-      {...props}
-    />
-  )
-}
-
-function Tooltip({
-  ...props
-}: React.ComponentProps<typeof TooltipPrimitive.Root>) {
-  return (
-    <TooltipProvider>
-      <TooltipPrimitive.Root data-slot="tooltip" {...props} />
-    </TooltipProvider>
-  )
-}
-
-function TooltipTrigger({
-  ...props
-}: React.ComponentProps<typeof TooltipPrimitive.Trigger>) {
-  return <TooltipPrimitive.Trigger data-slot="tooltip-trigger" {...props} />
-}
-
-function TooltipContent({
-  className,
-  sideOffset = 0,
+export function Tooltip({
+  content,
   children,
-  ...props
-}: React.ComponentProps<typeof TooltipPrimitive.Content>) {
+  placement = 'top',
+  className,
+}: {
+  content: ReactNode;
+  children: ReactElement | ReactNode;
+  placement?: FloatingPlacement;
+  className?: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const { triggerRef, setFloatingRef } = useFloating<HTMLSpanElement, HTMLDivElement>({
+    placement,
+    isOpen,
+    offset: 6,
+  });
+
+  const show = () => setIsOpen(true);
+  const hide = () => setIsOpen(false);
+
   return (
-    <TooltipPrimitive.Portal>
-      <TooltipPrimitive.Content
-        data-slot="tooltip-content"
-        sideOffset={sideOffset}
-        className={cn(
-          "bg-primary text-primary-foreground animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 w-fit origin-(--radix-tooltip-content-transform-origin) rounded-md px-3 py-1.5 text-xs text-balance",
-          className
-        )}
-        {...props}
+    <>
+      <span
+        ref={triggerRef}
+        onMouseEnter={show}
+        onMouseLeave={hide}
+        onFocus={show}
+        onBlur={hide}
+        className="inline-flex shrink-0 cursor-default"
       >
         {children}
-        <TooltipPrimitive.Arrow className="bg-primary fill-primary z-50 size-2.5 translate-y-[calc(-50%_-_2px)] rotate-45 rounded-[2px]" />
-      </TooltipPrimitive.Content>
-    </TooltipPrimitive.Portal>
-  )
+      </span>
+      {isOpen && (
+        <Portal>
+          <div
+            ref={setFloatingRef}
+            role="tooltip"
+            className={cn(
+              'z-50 max-w-xs rounded-md bg-foreground px-2.5 py-1 text-xs font-medium text-background shadow-md animate-fade-in focus:outline-none will-change-transform',
+              className
+            )}
+          >
+            {content}
+          </div>
+        </Portal>
+      )}
+    </>
+  );
 }
-
-export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider }
