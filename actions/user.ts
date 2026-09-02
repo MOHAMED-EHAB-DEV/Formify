@@ -27,7 +27,10 @@ export async function getCurrentUser(): Promise<IUser | null> {
       createdAt: user.createdAt,
       verified: user.verified,
     };
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.digest === 'DYNAMIC_SERVER_USAGE' || error?.message?.includes('Dynamic server usage')) {
+      throw error;
+    }
     console.error('getCurrentUser error:', error);
     return null;
   }

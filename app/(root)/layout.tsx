@@ -4,6 +4,8 @@ import { Sidebar } from '@/components/Sidebar';
 import { Topbar } from '@/components/Topbar';
 import { SocketProvider } from '@/context/socket-context';
 
+export const dynamic = 'force-dynamic';
+
 export default async function RootAppLayout({
   children,
 }: {
