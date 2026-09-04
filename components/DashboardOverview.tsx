@@ -14,7 +14,7 @@ import {
   ClockIcon,
   ChevronRightIcon,
 } from '@/components/ui/svgs/icons';
-import { formatDate, camelize } from '@/lib/utils';
+import { formatDate, camelize, cn } from '@/lib/utils';
 import type { Form, AppEvent } from '@/types';
 
 interface DashboardOverviewProps {
@@ -199,7 +199,7 @@ export function DashboardOverview({ username, forms, events }: DashboardOverview
           <h2 className="text-base font-bold text-foreground">Recent Activity</h2>
 
           <Card>
-            <CardContent className="p-5">
+            <CardContent className={cn('p-5 sm:p-6', events.length > 0 ? 'pt-5 sm:pt-6' : '')}>
               {events.length > 0 ? (
                 <ol className="relative border-s border-border-subtle ms-3 space-y-4">
                   {events.map((event) => (

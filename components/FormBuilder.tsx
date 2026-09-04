@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectItem, SelectSection } from '@/components/ui/select';
 import {
   PlusIcon,
   TrashIcon,
@@ -583,31 +584,56 @@ function SortableQuestionItem({
 
           <div className="flex items-center gap-2">
             {/* Question Type Selector */}
-            <select
+            <Select
+              size="sm"
               value={question.type}
-              onChange={(e) => onChangeType(question.id, e.target.value as QuestionType)}
-              className="h-8 rounded-md border border-input bg-card px-2 text-xs font-medium text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              onValueChange={(val) => onChangeType(question.id, val as QuestionType)}
+              className="w-40"
+              triggerClassName="h-8 text-xs font-medium"
+              aria-label="Select question type"
             >
-              <optgroup label="Text">
-                <option value="text">Short Answer</option>
-                <option value="paragraph">Paragraph</option>
-              </optgroup>
-              <optgroup label="Selection">
-                <option value="multiple-choice">Multiple Choice</option>
-                <option value="checkbox">Checkboxes</option>
-                <option value="dropdown">Dropdown</option>
-              </optgroup>
-              <optgroup label="Rating & Order">
-                <option value="rating">Rating Scale</option>
-                <option value="ranking">Ranking Order</option>
-              </optgroup>
-              <optgroup label="Inputs & Media">
-                <option value="file-upload">File Upload</option>
-                <option value="number">Number</option>
-                <option value="date">Date</option>
-                <option value="email">Email</option>
-              </optgroup>
-            </select>
+              <SelectSection title="Text">
+                <SelectItem value="text" startContent={<FileTextIcon size={14} />}>
+                  Short Answer
+                </SelectItem>
+                <SelectItem value="paragraph" startContent={<FileTextIcon size={14} />}>
+                  Paragraph
+                </SelectItem>
+              </SelectSection>
+              <SelectSection title="Selection" showDivider>
+                <SelectItem value="multiple-choice" startContent={<CheckCircleIcon size={14} />}>
+                  Multiple Choice
+                </SelectItem>
+                <SelectItem value="checkbox" startContent={<CheckSquareIcon size={14} />}>
+                  Checkboxes
+                </SelectItem>
+                <SelectItem value="dropdown" startContent={<ListIcon size={14} />}>
+                  Dropdown
+                </SelectItem>
+              </SelectSection>
+              <SelectSection title="Rating & Order" showDivider>
+                <SelectItem value="rating" startContent={<StarIcon size={14} />}>
+                  Rating Scale
+                </SelectItem>
+                <SelectItem value="ranking" startContent={<MoveIcon size={14} />}>
+                  Ranking Order
+                </SelectItem>
+              </SelectSection>
+              <SelectSection title="Inputs & Media" showDivider>
+                <SelectItem value="file-upload" startContent={<UploadCloudIcon size={14} />}>
+                  File Upload
+                </SelectItem>
+                <SelectItem value="number" startContent={<HashIcon size={14} />}>
+                  Number
+                </SelectItem>
+                <SelectItem value="date" startContent={<CalendarIcon size={14} />}>
+                  Date
+                </SelectItem>
+                <SelectItem value="email" startContent={<MailIcon size={14} />}>
+                  Email
+                </SelectItem>
+              </SelectSection>
+            </Select>
 
             {/* Required Toggle */}
             <button
@@ -667,28 +693,34 @@ function SortableQuestionItem({
           <div className="space-y-3 ps-2 border-s-2 border-border-subtle pt-1">
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="text-[11px] font-semibold text-muted-foreground">Rating Style</label>
-                <select
+                <label className="text-[11px] font-semibold text-muted-foreground block mb-1">Rating Style</label>
+                <Select
+                  size="sm"
                   value={question.ratingStyle || 'stars'}
-                  onChange={(e) =>
-                    onUpdateQuestion(question.id, { ratingStyle: e.target.value as 'stars' | 'linear-scale' })
+                  onValueChange={(val) =>
+                    onUpdateQuestion(question.id, { ratingStyle: val as 'stars' | 'linear-scale' })
                   }
-                  className="mt-1 h-8 w-full rounded-md border border-input bg-card px-2 text-xs font-medium"
+                  triggerClassName="h-8 text-xs font-medium"
+                  aria-label="Rating Style"
                 >
-                  <option value="stars">Star Rating</option>
-                  <option value="linear-scale">Linear Scale</option>
-                </select>
+                  <SelectItem value="stars" startContent={<StarIcon size={14} />}>
+                    Star Rating
+                  </SelectItem>
+                  <SelectItem value="linear-scale">Linear Scale</SelectItem>
+                </Select>
               </div>
               <div>
-                <label className="text-[11px] font-semibold text-muted-foreground">Maximum Value</label>
-                <select
-                  value={question.ratingMax || 5}
-                  onChange={(e) => onUpdateQuestion(question.id, { ratingMax: Number(e.target.value) })}
-                  className="mt-1 h-8 w-full rounded-md border border-input bg-card px-2 text-xs font-medium"
+                <label className="text-[11px] font-semibold text-muted-foreground block mb-1">Maximum Value</label>
+                <Select
+                  size="sm"
+                  value={String(question.ratingMax || 5)}
+                  onValueChange={(val) => onUpdateQuestion(question.id, { ratingMax: Number(val) })}
+                  triggerClassName="h-8 text-xs font-medium"
+                  aria-label="Maximum Value"
                 >
-                  <option value="5">1 to 5</option>
-                  <option value="10">1 to 10</option>
-                </select>
+                  <SelectItem value="5">1 to 5</SelectItem>
+                  <SelectItem value="10">1 to 10</SelectItem>
+                </Select>
               </div>
             </div>
 

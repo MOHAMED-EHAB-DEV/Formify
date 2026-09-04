@@ -105,6 +105,7 @@ export function useFormSocket({
         } else if (data.answers && data.id) {
           responseObj = {
             id: data.id,
+            formId: data.formId || formId || '',
             submittedAt: data.submittedAt || new Date().toISOString(),
             answers: data.answers,
           };

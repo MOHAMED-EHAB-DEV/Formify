@@ -16,6 +16,7 @@ interface UseFloatingOptions {
   placement?: FloatingPlacement;
   offset?: number;
   isOpen?: boolean;
+  matchTriggerWidth?: boolean;
 }
 
 export function useFloating<
@@ -25,6 +26,7 @@ export function useFloating<
   placement = 'bottom-end',
   offset = 6,
   isOpen = false,
+  matchTriggerWidth = false,
 }: UseFloatingOptions = {}) {
   const triggerRef = useRef<TriggerElement | null>(null);
   const floatingRef = useRef<FloatingElement | null>(null);
@@ -36,6 +38,9 @@ export function useFloating<
     if (!triggerEl || !floatingEl) return;
 
     const triggerRect = triggerEl.getBoundingClientRect();
+    if (matchTriggerWidth) {
+      floatingEl.style.minWidth = `${triggerRect.width}px`;
+    }
     const floatingRect = floatingEl.getBoundingClientRect();
 
     const viewportWidth = window.innerWidth;
@@ -92,7 +97,7 @@ export function useFloating<
     floatingEl.style.transform = '';
     floatingEl.style.transformOrigin = resolvedPlacement.startsWith('top') ? 'bottom' : 'top';
     floatingEl.style.visibility = 'visible';
-  }, [placement, offset]);
+  }, [placement, offset, matchTriggerWidth]);
 
   // Direct ref callback that positions immediately when DOM node mounts
   const setFloatingRef = useCallback(

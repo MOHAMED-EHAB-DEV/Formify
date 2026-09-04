@@ -23,6 +23,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectItem } from '@/components/ui/select';
 import {
   CheckCircleIcon,
   ChevronRightIcon,
@@ -421,18 +422,19 @@ export default function SubmitForm({ form, isOwner = false }: SubmitFormProps) {
               {/* 5. Dropdown Menu */}
               {currentQuestion.type === 'dropdown' && (
                 <div className="pt-2">
-                  <select
+                  <Select
+                    size="lg"
                     value={(answers[currentQuestion.id] as string) || ''}
-                    onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
-                    className="h-12 w-full rounded-xl border border-input bg-card px-4 text-base font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    onValueChange={(val) => handleAnswerChange(currentQuestion.id, val)}
+                    placeholder="Select an option..."
+                    aria-label={currentQuestion.label || 'Select an option'}
                   >
-                    <option value="">Select an option...</option>
                     {(currentQuestion.options || []).map((option, idx) => (
-                      <option key={idx} value={option}>
+                      <SelectItem key={idx} value={option}>
                         {option}
-                      </option>
+                      </SelectItem>
                     ))}
-                  </select>
+                  </Select>
                 </div>
               )}
 
