@@ -253,6 +253,23 @@ export async function submitResponse(formId: string, answers: Record<string, Ans
       };
     }
 
+    // Validate email format if provided for an email question
+    for (const question of form.questions || []) {
+      if (question.type === 'email') {
+        const val = answers[question.id];
+        if (typeof val === 'string' && val.trim().length > 0) {
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (!emailRegex.test(val.trim())) {
+            return {
+              success: false,
+              error: 'Please enter a valid email address',
+              code: 'VALIDATION',
+            };
+          }
+        }
+      }
+    }
+
     const session = await getSession();
     const responseId = nanoid(14);
     const submittedAt = new Date();

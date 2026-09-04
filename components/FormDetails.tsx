@@ -59,7 +59,6 @@ export function FormDetails({ form }: { form: Form }) {
         }
         return [data.response, ...prev];
       });
-      toast.success('New response received in real time!');
     },
   });
 

@@ -20,6 +20,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectItem, SelectSection } from '@/components/ui/select';
+import { Portal } from '@/components/ui/portal';
 import {
   PlusIcon,
   TrashIcon,
@@ -82,16 +83,22 @@ export function FormBuilder({ initialData }: FormBuilderProps) {
     const handleScroll = () => {
       if (headerRef.current) {
         const rect = headerRef.current.getBoundingClientRect();
-        setShowFloatingBar(rect.bottom < 20);
+        setShowFloatingBar(rect.bottom < 50);
       } else {
-        setShowFloatingBar(window.scrollY > 140);
+        setShowFloatingBar(window.scrollY > 80);
       }
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', handleScroll);
+    document.addEventListener('scroll', handleScroll, { passive: true, capture: true });
     handleScroll();
 
-    return () => window.removeEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleScroll);
+      document.removeEventListener('scroll', handleScroll, { capture: true });
+    };
   }, []);
 
   const sensors = useSensors(
@@ -103,7 +110,7 @@ export function FormBuilder({ initialData }: FormBuilderProps) {
   );
 
   return (
-    <div className="w-full space-y-6 animate-fade-in">
+    <div className="w-full space-y-6">
       {/* Action Header Bar */}
       <div
         ref={headerRef}
@@ -144,25 +151,13 @@ export function FormBuilder({ initialData }: FormBuilderProps) {
 
       {/* Floating Action Box On Scroll */}
       {showFloatingBar && (
-        <div
-          role="region"
-          aria-label="Floating form actions"
-          className="fixed bottom-5 inset-x-4 sm:inset-x-auto sm:inset-s-1/2 sm:-translate-x-1/2 z-40 max-w-lg w-auto animate-fade-in"
-        >
-          <div className="flex items-center justify-between sm:justify-start gap-3 rounded-2xl border border-border/80 bg-card/90 backdrop-blur-md px-4 py-2.5 shadow-xl ring-1 ring-border/50">
-            <div className="hidden sm:flex items-center gap-2 min-w-0 max-w-44">
-              <span className="h-2 w-2 rounded-full bg-primary shrink-0 animate-pulse" />
-              <span className="text-xs font-semibold text-foreground truncate">
-                {title || 'Untitled Form'}
-              </span>
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 shrink-0">
-                {questions.length} Qs
-              </Badge>
-            </div>
-
-            <div className="hidden sm:block h-4 w-px bg-border-subtle shrink-0" />
-
-            <div className="flex items-center gap-2 w-full sm:w-auto">
+        <Portal>
+          <div
+            role="region"
+            aria-label="Floating form actions"
+            className="fixed bottom-6 inset-s-4 inset-e-4 sm:inset-s-1/2 sm:inset-e-auto sm:-translate-x-1/2 md:inset-s-[calc(50%+7.5rem)] z-50 pointer-events-auto animate-fade-in"
+          >
+            <div className="flex items-center gap-2 rounded-2xl border border-border bg-card/95 backdrop-blur-lg p-2 shadow-2xl ring-1 ring-border/50">
               <Button
                 type="button"
                 variant="outline"
@@ -186,7 +181,7 @@ export function FormBuilder({ initialData }: FormBuilderProps) {
               </Button>
             </div>
           </div>
-        </div>
+        </Portal>
       )}
 
       {/* Split Panel Layout */}

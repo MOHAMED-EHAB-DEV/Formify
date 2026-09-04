@@ -34,6 +34,8 @@ import {
   TrashIcon,
   FileTextIcon,
   ClockIcon,
+  AlertCircleIcon,
+  MailIcon,
 } from '@/components/ui/svgs/icons';
 import { submitResponse } from '@/actions/forms';
 import { uploadFormFile } from '@/actions/upload';
@@ -123,6 +125,18 @@ export default function SubmitForm({ form, isOwner = false }: SubmitFormProps) {
 
   const handleNext = () => {
     if (!currentQuestion) return;
+
+    // Validate email format if question is email type and value provided
+    if (currentQuestion.type === 'email') {
+      const emailValue = (answers[currentQuestion.id] as string) || '';
+      if (emailValue.trim()) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(emailValue.trim())) {
+          toast.error('Please enter a valid email address');
+          return;
+        }
+      }
+    }
 
     if (currentStep < totalSteps - 1) {
       setCurrentStep((prev) => prev + 1);
@@ -558,24 +572,37 @@ export default function SubmitForm({ form, isOwner = false }: SubmitFormProps) {
               )}
 
               {/* 11. Email */}
-              {currentQuestion.type === 'email' && (
-                <div className="pt-2">
-                  <Input
-                    type="email"
-                    placeholder={currentQuestion.placeholder || 'name@example.com'}
-                    value={(answers[currentQuestion.id] as string) || ''}
-                    onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleNext();
-                      }
-                    }}
-                    autoFocus
-                    className="h-12 text-base px-4"
-                  />
-                </div>
-              )}
+              {currentQuestion.type === 'email' && (() => {
+                const val = (answers[currentQuestion.id] as string) || '';
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                const isInvalid = val.trim().length > 0 && !emailRegex.test(val.trim());
+                return (
+                  <div className="pt-2 space-y-1.5">
+                    <Input
+                      type="email"
+                      placeholder={currentQuestion.placeholder || 'name@example.com'}
+                      value={val}
+                      error={isInvalid}
+                      startAdornment={<MailIcon size={18} />}
+                      onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleNext();
+                        }
+                      }}
+                      autoFocus
+                      className="h-12 text-base px-4"
+                    />
+                    {isInvalid && (
+                      <p className="text-xs text-destructive flex items-center gap-1 animate-fade-in">
+                        <AlertCircleIcon size={13} />
+                        <span>Please enter a valid email address (e.g. name@example.com)</span>
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
             </fieldset>
           </div>
         )}
