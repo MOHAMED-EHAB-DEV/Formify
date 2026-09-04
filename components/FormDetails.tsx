@@ -29,13 +29,40 @@ import {
   StarIcon,
   FileTextIcon,
   UploadCloudIcon,
+  DownloadIcon,
 } from '@/components/ui/svgs/icons';
 import { deleteForm, changeStatus } from '@/actions/forms';
 import { useFormSocket } from '@/hooks/use-form-socket';
-import { formatDate, camelize } from '@/lib/utils';
+import { formatDate, camelize, truncateFileName } from '@/lib/utils';
 import { ShareModal } from '@/components/ShareModal';
 import { MarkdownRenderer } from '@/components/MarkdownRenderer';
 import type { Form, FormResponse, FormStatus, AnswerValue, FileAnswer } from '@/types';
+
+async function handleDownloadFile(url: string, filename: string) {
+  try {
+    toast.loading('Starting download...', { id: `dl-${filename}` });
+    const downloadUrl = `/api/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}`;
+    const res = await fetch(downloadUrl);
+    if (!res.ok) throw new Error('Download request failed');
+
+    const blob = await res.blob();
+    const objectUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = objectUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(objectUrl);
+
+    toast.success('Downloaded successfully', { id: `dl-${filename}` });
+  } catch (error) {
+    console.error('Direct download error:', error);
+    // Fallback: trigger download endpoint directly without navigating away
+    window.location.href = `/api/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}`;
+    toast.dismiss(`dl-${filename}`);
+  }
+}
 
 export function FormDetails({ form }: { form: Form }) {
   const router = useRouter();
@@ -501,25 +528,30 @@ export function FormDetails({ form }: { form: Form }) {
                               return (
                                 <div
                                   key={aIdx}
-                                  className="flex items-center justify-between p-2.5 rounded-lg bg-card border border-border-subtle text-xs"
+                                  className="flex items-center justify-between p-2.5 rounded-lg bg-card border border-border-subtle text-xs gap-2"
                                 >
-                                  <div className="flex items-center gap-2 min-w-0">
+                                  <div className="flex items-center gap-2 min-w-0 flex-1">
                                     <FileTextIcon size={16} className="text-primary shrink-0" />
-                                    <span className="font-medium text-foreground truncate">{file.name}</span>
+                                    <span
+                                      className="font-medium text-foreground truncate"
+                                      title={file.name}
+                                    >
+                                      {truncateFileName(file.name, 28)}
+                                    </span>
                                     {file.size && (
-                                      <span className="text-[10px] text-muted-foreground">
+                                      <span className="text-[10px] text-muted-foreground shrink-0">
                                         ({Math.round(file.size / 1024)} KB)
                                       </span>
                                     )}
                                   </div>
-                                  <a
-                                    href={file.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-primary hover:underline font-semibold shrink-0 ms-2"
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDownloadFile(file.url, file.name)}
+                                    className="inline-flex items-center gap-1.5 text-primary hover:underline font-semibold shrink-0 ms-2 cursor-pointer"
                                   >
-                                    View / Download
-                                  </a>
+                                    <DownloadIcon size={14} />
+                                    <span>Download</span>
+                                  </button>
                                 </div>
                               );
                             })}
@@ -721,15 +753,15 @@ function FormattedAnswer({ answer, type }: { answer: AnswerValue | undefined; ty
   if (type === 'file-upload' && typeof answer === 'object' && 'url' in answer) {
     const file = answer as FileAnswer;
     return (
-      <a
-        href={file.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex items-center gap-1.5 text-primary hover:underline text-xs"
+      <button
+        type="button"
+        onClick={() => handleDownloadFile(file.url, file.name)}
+        className="inline-flex items-center gap-1.5 text-primary hover:underline text-xs cursor-pointer font-medium max-w-full min-w-0"
+        title={file.name}
       >
-        <FileTextIcon size={14} />
-        <span>{file.name}</span>
-      </a>
+        <DownloadIcon size={14} className="shrink-0" />
+        <span className="truncate">{truncateFileName(file.name, 28)}</span>
+      </button>
     );
   }
 

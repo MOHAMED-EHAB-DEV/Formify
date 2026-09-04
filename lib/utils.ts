@@ -25,3 +25,23 @@ export function formatDate(date: Date | string | number | undefined): string {
     year: 'numeric',
   });
 }
+
+export function truncateFileName(name: string, maxLength = 24): string {
+  if (!name || name.length <= maxLength) return name;
+  const lastDot = name.lastIndexOf('.');
+  if (lastDot <= 0 || name.length - lastDot > 8) {
+    return `${name.slice(0, Math.max(1, maxLength - 3))}...`;
+  }
+  const ext = name.slice(lastDot);
+  const base = name.slice(0, lastDot);
+  const available = maxLength - ext.length - 3;
+  if (available <= 3) {
+    return `${name.slice(0, Math.max(1, maxLength - 3))}...`;
+  }
+  const frontChars = Math.ceil(available * 0.6);
+  const backChars = available - frontChars;
+  if (backChars > 0) {
+    return `${base.slice(0, frontChars)}...${base.slice(-backChars)}${ext}`;
+  }
+  return `${base.slice(0, available)}...${ext}`;
+}
