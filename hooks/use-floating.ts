@@ -65,11 +65,13 @@ export function useFloating<
       y = triggerRect.top + (triggerRect.height - floatingRect.height) / 2;
     }
 
+    const isRtl = typeof document !== 'undefined' && document.documentElement.dir === 'rtl';
+
     // Calculate X
     if (resolvedPlacement.endsWith('-start')) {
-      x = triggerRect.left;
+      x = isRtl ? triggerRect.right - floatingRect.width : triggerRect.left;
     } else if (resolvedPlacement.endsWith('-end')) {
-      x = triggerRect.right - floatingRect.width;
+      x = isRtl ? triggerRect.left : triggerRect.right - floatingRect.width;
     } else if (resolvedPlacement === 'top' || resolvedPlacement === 'bottom') {
       x = triggerRect.left + (triggerRect.width - floatingRect.width) / 2;
     } else if (resolvedPlacement === 'left') {
@@ -85,9 +87,9 @@ export function useFloating<
 
     // Direct 60FPS DOM style mutation — Zero React State
     floatingEl.style.position = 'fixed';
-    floatingEl.style.top = '0px';
-    floatingEl.style.left = '0px';
-    floatingEl.style.transform = `translate3d(${clampedX}px, ${clampedY}px, 0)`;
+    floatingEl.style.top = `${clampedY}px`;
+    floatingEl.style.left = `${clampedX}px`;
+    floatingEl.style.transform = '';
     floatingEl.style.transformOrigin = resolvedPlacement.startsWith('top') ? 'bottom' : 'top';
     floatingEl.style.visibility = 'visible';
   }, [placement, offset]);
@@ -99,8 +101,6 @@ export function useFloating<
       if (node) {
         node.style.visibility = 'hidden';
         node.style.position = 'fixed';
-        node.style.top = '0px';
-        node.style.left = '0px';
         updatePosition();
         requestAnimationFrame(updatePosition);
       }
