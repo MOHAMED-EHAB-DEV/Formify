@@ -9,6 +9,7 @@ import {
   DndContext,
   closestCenter,
   PointerSensor,
+  KeyboardSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
@@ -18,6 +19,7 @@ import {
   useSortable,
   verticalListSortingStrategy,
   arrayMove,
+  sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Button } from '@/components/ui/button';
@@ -28,6 +30,8 @@ import {
   CheckCircleIcon,
   ChevronRightIcon,
   ChevronLeftIcon,
+  ChevronUpIcon,
+  ChevronDownIcon,
   StarIcon,
   UploadCloudIcon,
   GripVerticalIcon,
@@ -40,6 +44,7 @@ import {
 import { submitResponse } from '@/actions/forms';
 import { uploadFormFile } from '@/actions/upload';
 import { MarkdownRenderer } from '@/components/MarkdownRenderer';
+import { truncateFileName } from '@/lib/utils';
 import type { Form, AnswerValue, FileAnswer } from '@/types';
 
 interface SubmitFormProps {
@@ -80,19 +85,6 @@ export default function SubmitForm({ form, isOwner = false }: SubmitFormProps) {
     });
   };
 
-  // Reorder for ranking questions
-  const handleRankingDragEnd = (event: DragEndEvent, questionId: string) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-
-    setAnswers((prev) => {
-      const currentItems = (prev[questionId] as string[]) || currentQuestion.options || [];
-      const oldIndex = currentItems.indexOf(String(active.id));
-      const newIndex = currentItems.indexOf(String(over.id));
-      if (oldIndex === -1 || newIndex === -1) return prev;
-      return { ...prev, [questionId]: arrayMove(currentItems, oldIndex, newIndex) };
-    });
-  };
 
   // File upload handler
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, questionId: string) => {
@@ -497,12 +489,15 @@ export default function SubmitForm({ form, isOwner = false }: SubmitFormProps) {
                   />
 
                   {answers[currentQuestion.id] ? (
-                    <div className="flex items-center justify-between p-4 rounded-xl border border-primary/30 bg-primary/5">
-                      <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex items-center justify-between p-4 rounded-xl border border-primary/30 bg-primary/5 gap-3">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
                         <FileTextIcon size={24} className="text-primary shrink-0" />
-                        <div className="truncate">
-                          <p className="text-sm font-semibold text-foreground truncate">
-                            {(answers[currentQuestion.id] as FileAnswer).name}
+                        <div className="min-w-0 flex-1">
+                          <p
+                            className="text-sm font-semibold text-foreground truncate"
+                            title={(answers[currentQuestion.id] as FileAnswer).name}
+                          >
+                            {truncateFileName((answers[currentQuestion.id] as FileAnswer).name, 28)}
                           </p>
                           <p className="text-xs text-muted-foreground">
                             {Math.round(((answers[currentQuestion.id] as FileAnswer).size || 0) / 1024)} KB
@@ -514,7 +509,7 @@ export default function SubmitForm({ form, isOwner = false }: SubmitFormProps) {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleAnswerChange(currentQuestion.id, '')}
-                        className="text-muted-foreground hover:text-destructive h-8 px-2"
+                        className="text-muted-foreground hover:text-destructive h-8 px-2 shrink-0"
                       >
                         <TrashIcon size={16} />
                       </Button>
@@ -651,6 +646,9 @@ function RankingRunner({
       activationConstraint: {
         distance: 5,
       },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
     })
   );
 
@@ -664,16 +662,29 @@ function RankingRunner({
     }
   };
 
+  const handleMove = (index: number, direction: 'up' | 'down') => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= items.length) return;
+    onReorder(arrayMove(items, index, targetIndex));
+  };
+
   return (
     <div className="space-y-2 pt-2">
       <p className="text-xs text-muted-foreground mb-1">
-        Drag items to order by your preference (top = highest priority):
+        Drag items via the handle or use arrows to set your preference (top = highest priority):
       </p>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={items} strategy={verticalListSortingStrategy}>
           <div className="space-y-2">
             {items.map((item, idx) => (
-              <SortableRankingItem key={item} id={item} text={item} index={idx} />
+              <SortableRankingItem
+                key={item}
+                id={item}
+                text={item}
+                index={idx}
+                totalItems={items.length}
+                onMove={handleMove}
+              />
             ))}
           </div>
         </SortableContext>
@@ -682,36 +693,82 @@ function RankingRunner({
   );
 }
 
-function SortableRankingItem({ id, text, index }: { id: string; text: string; index: number }) {
+function SortableRankingItem({
+  id,
+  text,
+  index,
+  totalItems,
+  onMove,
+}: {
+  id: string;
+  text: string;
+  index: number;
+  totalItems: number;
+  onMove: (index: number, direction: 'up' | 'down') => void;
+}) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id,
   });
 
-  const style = {
+  const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.6 : 1,
+    zIndex: isDragging ? 20 : 1,
   };
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className="flex items-center gap-3 p-3.5 rounded-xl border border-border bg-card shadow-xs transition-colors"
+      className={`flex items-center gap-3 p-3 sm:p-3.5 rounded-xl border transition-colors ${
+        isDragging
+          ? 'border-primary bg-primary/5 shadow-md ring-2 ring-primary/20'
+          : 'border-border bg-card shadow-xs'
+      }`}
     >
       <button
         type="button"
         {...attributes}
         {...listeners}
         aria-label="Drag to reorder preference"
-        className="cursor-grab active:cursor-grabbing p-1 text-muted-foreground hover:text-foreground"
+        style={{ touchAction: 'none' }}
+        className="cursor-grab active:cursor-grabbing p-2 -m-1 text-muted-foreground hover:text-foreground touch-none select-none rounded-lg hover:bg-muted/60 transition-colors shrink-0"
       >
         <GripVerticalIcon size={18} />
       </button>
       <span className="h-6 w-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0">
         {index + 1}
       </span>
-      <span className="text-sm font-medium text-foreground">{text}</span>
+      <span className="text-sm font-medium text-foreground flex-1 select-none min-w-0 break-words">
+        {text}
+      </span>
+      <div className="flex items-center gap-0.5 shrink-0 ms-auto">
+        <button
+          type="button"
+          disabled={index === 0}
+          onClick={(e) => {
+            e.stopPropagation();
+            onMove(index, 'up');
+          }}
+          aria-label={`Move ${text} up`}
+          className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30 disabled:pointer-events-none transition-colors"
+        >
+          <ChevronUpIcon size={16} />
+        </button>
+        <button
+          type="button"
+          disabled={index === totalItems - 1}
+          onClick={(e) => {
+            e.stopPropagation();
+            onMove(index, 'down');
+          }}
+          aria-label={`Move ${text} down`}
+          className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30 disabled:pointer-events-none transition-colors"
+        >
+          <ChevronDownIcon size={16} />
+        </button>
+      </div>
     </div>
   );
 }

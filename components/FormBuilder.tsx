@@ -637,7 +637,8 @@ function SortableQuestionItem({
               {...attributes}
               {...listeners}
               aria-label="Drag to reorder"
-              className="cursor-grab active:cursor-grabbing p-1 text-muted-foreground hover:text-foreground rounded-md transition-colors"
+              style={{ touchAction: 'none' }}
+              className="cursor-grab active:cursor-grabbing p-1 text-muted-foreground hover:text-foreground rounded-md transition-colors touch-none"
             >
               <GripVerticalIcon size={18} />
             </button>
