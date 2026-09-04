@@ -1,22 +1,21 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
-import type { FormStatus, QuestionType } from '@/types';
+import type { FormStatus, QuestionType, RatingStyle } from '@/types';
 
 export interface IQuestionSubdoc {
   _id: mongoose.Types.ObjectId;
   id: string;
   type: QuestionType;
   label: string;
-  options: string[];
-}
-
-export interface IResponseSubdoc {
-  _id: mongoose.Types.ObjectId;
-  id: string;
-  submittedAt: Date;
-  answers: Array<{
-    questionId: string;
-    answer: string;
-  }>;
+  description?: string;
+  required?: boolean;
+  placeholder?: string;
+  options?: string[];
+  ratingStyle?: RatingStyle;
+  ratingMax?: number;
+  ratingMinLabel?: string;
+  ratingMaxLabel?: string;
+  maxFileSizeMb?: number;
+  allowedFileTypes?: string[];
 }
 
 export interface IFormDocument extends Document {
@@ -25,7 +24,8 @@ export interface IFormDocument extends Document {
   title: string;
   description: string;
   questions: IQuestionSubdoc[];
-  responses: IResponseSubdoc[];
+  responsesCount: number;
+  closeDate?: Date | null;
   creatorId: mongoose.Types.ObjectId;
   status: FormStatus;
   createdAt: Date;
@@ -38,26 +38,36 @@ const QuestionSchema = new Schema(
     id: { type: String, required: true },
     type: {
       type: String,
-      enum: ['text', 'multiple-choice'],
+      enum: [
+        'text',
+        'paragraph',
+        'multiple-choice',
+        'checkbox',
+        'dropdown',
+        'rating',
+        'ranking',
+        'file-upload',
+        'number',
+        'date',
+        'email',
+      ],
       required: true,
     },
     label: { type: String, required: true },
+    description: { type: String, default: '' },
+    required: { type: Boolean, default: false },
+    placeholder: { type: String, default: '' },
     options: { type: [String], default: [] },
-  },
-  { _id: true }
-);
-
-const ResponseSchema = new Schema(
-  {
-    _id: { type: Schema.Types.ObjectId, auto: true },
-    id: { type: String, required: true },
-    submittedAt: { type: Date, default: Date.now },
-    answers: [
-      {
-        questionId: { type: String, required: true },
-        answer: { type: String, required: true, default: '' },
-      },
-    ],
+    ratingStyle: {
+      type: String,
+      enum: ['stars', 'linear-scale'],
+      default: 'stars',
+    },
+    ratingMax: { type: Number, default: 5 },
+    ratingMinLabel: { type: String, default: '' },
+    ratingMaxLabel: { type: String, default: '' },
+    maxFileSizeMb: { type: Number, default: 10 },
+    allowedFileTypes: { type: [String], default: [] },
   },
   { _id: true }
 );
@@ -68,7 +78,8 @@ const FormSchema = new Schema<IFormDocument>(
     title: { type: String, required: true, trim: true },
     description: { type: String, default: '' },
     questions: { type: [QuestionSchema], default: [] },
-    responses: { type: [ResponseSchema], default: [] },
+    responsesCount: { type: Number, default: 0, index: true },
+    closeDate: { type: Date, default: null },
     creatorId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     status: {
       type: String,
@@ -85,3 +96,4 @@ const FormModel: Model<IFormDocument> =
   mongoose.model<IFormDocument>('Form', FormSchema);
 
 export default FormModel;
+

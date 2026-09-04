@@ -6,11 +6,12 @@ import mongoose from 'mongoose';
 import * as v from 'valibot';
 import { connectToDatabase } from '@/lib/database';
 import FormModel from '@/models/form.model';
+import FormResponseModel from '@/models/response.model';
 import { getSession } from '@/lib/session';
 import { createEvent } from '@/actions/events';
 import { SaveFormSchema, type SaveFormInput } from '@/schemas/form.schema';
 import { broadcastSocketEvent } from '@/lib/socket';
-import type { ActionResult, Form, FormStatus } from '@/types';
+import type { ActionResult, Form, FormStatus, AnswerValue, FormResponse } from '@/types';
 
 export async function saveOrUpdateForm(input: SaveFormInput): Promise<ActionResult<{ formId: string; isNew: boolean }>> {
   try {
@@ -29,6 +30,23 @@ export async function saveOrUpdateForm(input: SaveFormInput): Promise<ActionResu
 
     const data = parsed.output;
 
+    const mappedQuestions = data.questions.map((q) => ({
+      _id: new mongoose.Types.ObjectId(),
+      id: q.id || nanoid(10),
+      type: q.type,
+      label: q.label,
+      description: q.description || '',
+      required: q.required ?? false,
+      placeholder: q.placeholder || '',
+      options: q.options || [],
+      ratingStyle: q.ratingStyle || 'stars',
+      ratingMax: q.ratingMax ?? 5,
+      ratingMinLabel: q.ratingMinLabel || '',
+      ratingMaxLabel: q.ratingMaxLabel || '',
+      maxFileSizeMb: q.maxFileSizeMb ?? 10,
+      allowedFileTypes: q.allowedFileTypes || [],
+    }));
+
     if (data.formId) {
       const existingForm = await FormModel.findOne({ id: data.formId });
       if (!existingForm) {
@@ -41,13 +59,8 @@ export async function saveOrUpdateForm(input: SaveFormInput): Promise<ActionResu
 
       existingForm.title = data.title;
       existingForm.description = data.description || '';
-      existingForm.questions = data.questions.map((q) => ({
-        _id: new mongoose.Types.ObjectId(),
-        id: q.id || nanoid(10),
-        type: q.type,
-        label: q.label,
-        options: q.options || [],
-      }));
+      existingForm.questions = mappedQuestions;
+      existingForm.closeDate = data.closeDate ? new Date(data.closeDate) : null;
 
       if (data.status) {
         existingForm.status = data.status as FormStatus;
@@ -80,14 +93,9 @@ export async function saveOrUpdateForm(input: SaveFormInput): Promise<ActionResu
         description: data.description || '',
         creatorId: new mongoose.Types.ObjectId(session.userId),
         status: (data.status as FormStatus) || 'draft',
-        questions: data.questions.map((q) => ({
-          _id: new mongoose.Types.ObjectId(),
-          id: q.id || nanoid(10),
-          type: q.type,
-          label: q.label,
-          options: q.options || [],
-        })),
-        responses: [],
+        questions: mappedQuestions,
+        responsesCount: 0,
+        closeDate: data.closeDate ? new Date(data.closeDate) : null,
       });
 
       await createEvent({
@@ -126,20 +134,37 @@ export async function getFormById(formId: string): Promise<ActionResult<{ form: 
       return { success: false, error: 'Form not found', code: 'NOT_FOUND' };
     }
 
+    const responsesDocs = await FormResponseModel.find({ formId })
+      .sort({ submittedAt: -1 })
+      .lean();
+
     const form: Form = {
       id: formDoc.id,
       title: formDoc.title,
       description: formDoc.description || '',
       status: formDoc.status as FormStatus,
+      closeDate: formDoc.closeDate ? new Date(formDoc.closeDate).toISOString() : null,
+      responsesCount: formDoc.responsesCount ?? responsesDocs.length,
       creatorId: formDoc.creatorId.toString(),
-      questions: formDoc.questions.map((q) => ({
+      questions: (formDoc.questions || []).map((q) => ({
         id: q.id,
         type: q.type,
         label: q.label,
+        description: q.description || '',
+        required: q.required ?? false,
+        placeholder: q.placeholder || '',
         options: q.options || [],
+        ratingStyle: q.ratingStyle || 'stars',
+        ratingMax: q.ratingMax ?? 5,
+        ratingMinLabel: q.ratingMinLabel || '',
+        ratingMaxLabel: q.ratingMaxLabel || '',
+        maxFileSizeMb: q.maxFileSizeMb ?? 10,
+        allowedFileTypes: q.allowedFileTypes || [],
       })),
-      responses: formDoc.responses.map((r) => ({
+      responses: responsesDocs.map((r) => ({
         id: r.id,
+        formId: r.formId,
+        respondentId: r.respondentId?.toString(),
         submittedAt: r.submittedAt ? new Date(r.submittedAt).toISOString() : new Date().toISOString(),
         answers: (r.answers || []).map((a) => ({
           questionId: a.questionId,
@@ -174,20 +199,23 @@ export async function getFormByUserId(userId: string): Promise<ActionResult<{ fo
       title: formDoc.title,
       description: formDoc.description || '',
       status: formDoc.status as FormStatus,
+      closeDate: formDoc.closeDate ? new Date(formDoc.closeDate).toISOString() : null,
+      responsesCount: formDoc.responsesCount ?? 0,
       creatorId: formDoc.creatorId.toString(),
       questions: (formDoc.questions || []).map((q) => ({
         id: q.id,
         type: q.type,
         label: q.label,
+        description: q.description || '',
+        required: q.required ?? false,
+        placeholder: q.placeholder || '',
         options: q.options || [],
-      })),
-      responses: (formDoc.responses || []).map((r) => ({
-        id: r.id,
-        submittedAt: r.submittedAt ? new Date(r.submittedAt).toISOString() : new Date().toISOString(),
-        answers: (r.answers || []).map((a) => ({
-          questionId: a.questionId,
-          answer: a.answer,
-        })),
+        ratingStyle: q.ratingStyle || 'stars',
+        ratingMax: q.ratingMax ?? 5,
+        ratingMinLabel: q.ratingMinLabel || '',
+        ratingMaxLabel: q.ratingMaxLabel || '',
+        maxFileSizeMb: q.maxFileSizeMb ?? 10,
+        allowedFileTypes: q.allowedFileTypes || [],
       })),
       createdAt: formDoc.createdAt ? new Date(formDoc.createdAt).toISOString() : new Date().toISOString(),
       updatedAt: formDoc.updatedAt ? new Date(formDoc.updatedAt).toISOString() : new Date().toISOString(),
@@ -200,7 +228,7 @@ export async function getFormByUserId(userId: string): Promise<ActionResult<{ fo
   }
 }
 
-export async function submitResponse(formId: string, answers: Record<string, string>): Promise<ActionResult> {
+export async function submitResponse(formId: string, answers: Record<string, AnswerValue>): Promise<ActionResult> {
   try {
     if (!formId) {
       return { success: false, error: 'Form ID is required', code: 'VALIDATION' };
@@ -217,37 +245,54 @@ export async function submitResponse(formId: string, answers: Record<string, str
       return { success: false, error: 'This form is not currently accepting submissions', code: 'UNAUTHORIZED' };
     }
 
-    const responseId = nanoid(14);
-    const newResponse = {
-      _id: new mongoose.Types.ObjectId(),
-      id: responseId,
-      submittedAt: new Date(),
-      answers: Object.entries(answers).map(([questionId, answer]) => ({
-        questionId,
-        answer: String(answer || ''),
-      })),
-    };
+    if (form.closeDate && new Date() > new Date(form.closeDate)) {
+      return {
+        success: false,
+        error: `This form closed on ${new Date(form.closeDate).toLocaleDateString()} and is no longer accepting responses.`,
+        code: 'CONFLICT',
+      };
+    }
 
-    form.responses.push(newResponse);
-    await form.save();
+    const session = await getSession();
+    const responseId = nanoid(14);
+    const submittedAt = new Date();
+
+    const formattedAnswers = Object.entries(answers).map(([questionId, answer]) => ({
+      questionId,
+      answer,
+    }));
+
+    // Create record in dedicated FormResponse collection
+    await FormResponseModel.create({
+      id: responseId,
+      formId: form.id,
+      respondentId: session?.userId ? new mongoose.Types.ObjectId(session.userId) : null,
+      submittedAt,
+      answers: formattedAnswers,
+    });
+
+    // Atomic increment of response count
+    await FormModel.updateOne({ id: formId }, { $inc: { responsesCount: 1 } });
+    const currentTotalResponses = (form.responsesCount || 0) + 1;
 
     await createEvent({
       type: 'form_submitted',
       formId: form.id,
       formTitle: form.title,
       userId: form.creatorId.toString(),
-      metadata: { responseCount: form.responses.length },
+      metadata: { responseCount: currentTotalResponses },
     });
 
-    // Broadcast event to socket server
+    // Broadcast event to socket server for real-time live sync
     await broadcastSocketEvent(formId, 'new_response', {
       formId,
       response: {
         id: responseId,
-        submittedAt: newResponse.submittedAt.toISOString(),
-        answers: newResponse.answers,
+        formId: form.id,
+        submittedAt: submittedAt.toISOString(),
+        answers: formattedAnswers,
       },
-      totalResponses: form.responses.length,
+      totalResponses: currentTotalResponses,
     });
 
     revalidatePath(`/forms/details/${formId}`);
@@ -283,9 +328,11 @@ export async function deleteForm(formId: string): Promise<ActionResult> {
       formId: form.id,
       formTitle: form.title,
       userId: session.userId,
-      metadata: { questionCount: form.questions.length, responseCount: form.responses.length },
+      metadata: { questionCount: form.questions.length, responseCount: form.responsesCount || 0 },
     });
 
+    // Cascade delete: purge all responses associated with this form
+    await FormResponseModel.deleteMany({ formId });
     await FormModel.deleteOne({ id: formId });
 
     revalidatePath('/forms');

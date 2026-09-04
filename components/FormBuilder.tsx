@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import {
   PlusIcon,
   TrashIcon,
@@ -25,9 +26,18 @@ import {
   FileTextIcon,
   ListIcon,
   CheckCircleIcon,
+  CheckSquareIcon,
+  StarIcon,
+  UploadCloudIcon,
+  CalendarIcon,
+  HashIcon,
+  MailIcon,
+  MoveIcon,
+  ClockIcon,
 } from '@/components/ui/svgs/icons';
 import { useFormBuilder } from '@/hooks/use-form-builder';
-import type { Question, FormStatus } from '@/types';
+import { MarkdownRenderer } from '@/components/MarkdownRenderer';
+import type { Question, FormStatus, QuestionType } from '@/types';
 
 interface FormBuilderProps {
   initialData?: {
@@ -36,6 +46,7 @@ interface FormBuilderProps {
     description?: string;
     questions?: Question[];
     status?: FormStatus;
+    closeDate?: Date | string | null;
   };
 }
 
@@ -45,11 +56,15 @@ export function FormBuilder({ initialData }: FormBuilderProps) {
     setTitle,
     description,
     setDescription,
+    closeDate,
+    setCloseDate,
     questions,
     isSaving,
     addQuestion,
     deleteQuestion,
+    updateQuestion,
     updateQuestionLabel,
+    toggleQuestionRequired,
     changeQuestionType,
     addOption,
     updateOption,
@@ -57,6 +72,8 @@ export function FormBuilder({ initialData }: FormBuilderProps) {
     handleDragEnd,
     handleSave,
   } = useFormBuilder(initialData);
+
+  const [addMenuOpen, setAddMenuOpen] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -131,8 +148,43 @@ export function FormBuilder({ initialData }: FormBuilderProps) {
                   placeholder="Tell respondents what this form is for..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="min-h-[80px]"
+                  className="min-h-20"
                 />
+              </div>
+
+              {/* Close Date / Deadline Setting */}
+              <div className="pt-2 border-t border-border-subtle">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <label htmlFor="close-date" className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                      <ClockIcon size={14} className="text-primary" />
+                      <span>Form Close Date / Expiration</span>
+                    </label>
+                    <p className="text-[11px] text-muted-foreground">
+                      Submissions are automatically rejected once this deadline passes.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="close-date"
+                      type="datetime-local"
+                      value={closeDate}
+                      onChange={(e) => setCloseDate(e.target.value)}
+                      className="h-8 text-xs max-w-52.5"
+                    />
+                    {closeDate && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setCloseDate('')}
+                        className="h-8 px-2 text-xs text-muted-foreground hover:text-destructive"
+                      >
+                        Clear
+                      </Button>
+                    )}
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -148,6 +200,8 @@ export function FormBuilder({ initialData }: FormBuilderProps) {
                     index={index}
                     onUpdateLabel={updateQuestionLabel}
                     onChangeType={changeQuestionType}
+                    onToggleRequired={toggleQuestionRequired}
+                    onUpdateQuestion={updateQuestion}
                     onDelete={deleteQuestion}
                     onAddOption={addOption}
                     onUpdateOption={updateOption}
@@ -158,26 +212,142 @@ export function FormBuilder({ initialData }: FormBuilderProps) {
             </SortableContext>
           </DndContext>
 
-          {/* Add Question Actions */}
-          <div className="flex flex-col sm:flex-row gap-3 pt-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => addQuestion('text')}
-              className="flex-1 border-dashed"
-            >
-              <FileTextIcon size={16} aria-hidden="true" />
-              <span>Add Short Answer</span>
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => addQuestion('multiple-choice')}
-              className="flex-1 border-dashed"
-            >
-              <ListIcon size={16} aria-hidden="true" />
-              <span>Add Multiple Choice</span>
-            </Button>
+          {/* Comprehensive Question Insertion Grid */}
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Add Question
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setAddMenuOpen((prev) => !prev)}
+                className="text-xs h-7 text-primary"
+              >
+                {addMenuOpen ? 'Hide Menu' : 'Show All Types'}
+              </Button>
+            </div>
+
+            {/* Quick action buttons */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => addQuestion('text')}
+                className="justify-start gap-2 border-dashed h-9 text-xs"
+              >
+                <FileTextIcon size={14} />
+                <span>Short Text</span>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => addQuestion('paragraph')}
+                className="justify-start gap-2 border-dashed h-9 text-xs"
+              >
+                <FileTextIcon size={14} />
+                <span>Paragraph</span>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => addQuestion('multiple-choice')}
+                className="justify-start gap-2 border-dashed h-9 text-xs"
+              >
+                <ListIcon size={14} />
+                <span>Choice</span>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => addQuestion('checkbox')}
+                className="justify-start gap-2 border-dashed h-9 text-xs"
+              >
+                <CheckSquareIcon size={14} />
+                <span>Checkboxes</span>
+              </Button>
+            </div>
+
+            {/* Expanded categorized menu */}
+            {addMenuOpen && (
+              <div className="rounded-xl border border-border bg-card p-4 grid grid-cols-2 sm:grid-cols-3 gap-2 animate-fade-in">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => addQuestion('dropdown')}
+                  className="justify-start gap-2 text-xs"
+                >
+                  <ListIcon size={14} />
+                  <span>Dropdown Menu</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => addQuestion('rating')}
+                  className="justify-start gap-2 text-xs"
+                >
+                  <StarIcon size={14} />
+                  <span>Rating Scale</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => addQuestion('ranking')}
+                  className="justify-start gap-2 text-xs"
+                >
+                  <MoveIcon size={14} />
+                  <span>Ranking Reorder</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => addQuestion('file-upload')}
+                  className="justify-start gap-2 text-xs"
+                >
+                  <UploadCloudIcon size={14} />
+                  <span>File Upload</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => addQuestion('number')}
+                  className="justify-start gap-2 text-xs"
+                >
+                  <HashIcon size={14} />
+                  <span>Number</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => addQuestion('date')}
+                  className="justify-start gap-2 text-xs"
+                >
+                  <CalendarIcon size={14} />
+                  <span>Date Picker</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => addQuestion('email')}
+                  className="justify-start gap-2 text-xs"
+                >
+                  <MailIcon size={14} />
+                  <span>Email</span>
+                </Button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -203,20 +373,46 @@ export function FormBuilder({ initialData }: FormBuilderProps) {
                     {description}
                   </p>
                 )}
+                {closeDate && (
+                  <div className="mt-2 inline-flex items-center gap-1.5 text-xs text-warning bg-warning/10 px-2.5 py-1 rounded-md">
+                    <ClockIcon size={13} />
+                    <span>Closes {new Date(closeDate).toLocaleString()}</span>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-4 pt-2">
                 {questions.map((q, idx) => (
                   <div key={q.id} className="rounded-xl border border-border-subtle bg-muted/30 p-4 space-y-2">
-                    <p className="text-sm font-semibold text-foreground">
-                      {idx + 1}. {q.label || <span className="italic text-muted-foreground">Untitled question</span>}
-                    </p>
-
-                    {q.type === 'text' ? (
-                      <div className="h-9 w-full rounded-md border border-input bg-card px-3 py-2 text-xs text-muted-foreground">
-                        User text response...
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="text-sm font-semibold text-foreground">
+                        <span>{idx + 1}. </span>
+                        {q.label ? (
+                          <MarkdownRenderer content={q.label} />
+                        ) : (
+                          <span className="italic text-muted-foreground">Untitled question</span>
+                        )}
+                        {q.required && <span className="text-destructive ms-1">*</span>}
                       </div>
-                    ) : (
+                      <Badge variant="outline" className="text-[10px] uppercase tracking-wider shrink-0">
+                        {q.type}
+                      </Badge>
+                    </div>
+
+                    {/* Type-specific preview renderers */}
+                    {q.type === 'text' && (
+                      <div className="h-9 w-full rounded-md border border-input bg-card px-3 py-2 text-xs text-muted-foreground">
+                        {q.placeholder || 'User text response...'}
+                      </div>
+                    )}
+
+                    {q.type === 'paragraph' && (
+                      <div className="h-16 w-full rounded-md border border-input bg-card px-3 py-2 text-xs text-muted-foreground">
+                        {q.placeholder || 'Detailed user response...'}
+                      </div>
+                    )}
+
+                    {q.type === 'multiple-choice' && (
                       <div className="space-y-1.5 pt-1">
                         {(q.options || []).map((opt, optIdx) => (
                           <div key={optIdx} className="flex items-center gap-2.5 text-xs text-foreground">
@@ -224,6 +420,99 @@ export function FormBuilder({ initialData }: FormBuilderProps) {
                             <span>{opt || `Option ${optIdx + 1}`}</span>
                           </div>
                         ))}
+                      </div>
+                    )}
+
+                    {q.type === 'checkbox' && (
+                      <div className="space-y-1.5 pt-1">
+                        {(q.options || []).map((opt, optIdx) => (
+                          <div key={optIdx} className="flex items-center gap-2.5 text-xs text-foreground">
+                            <span className="h-3.5 w-3.5 rounded-sm border border-primary/40 bg-card shrink-0" />
+                            <span>{opt || `Option ${optIdx + 1}`}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {q.type === 'dropdown' && (
+                      <div className="h-9 w-full rounded-md border border-input bg-card px-3 py-2 text-xs text-muted-foreground flex items-center justify-between">
+                        <span>Select an option...</span>
+                        <span>▼</span>
+                      </div>
+                    )}
+
+                    {q.type === 'rating' && (
+                      <div className="pt-1">
+                        {q.ratingStyle === 'linear-scale' ? (
+                          <div className="space-y-1.5">
+                            <div className="flex gap-1.5">
+                              {Array.from({ length: q.ratingMax || 5 }, (_, i) => (
+                                <div
+                                  key={i}
+                                  className="h-8 flex-1 flex items-center justify-center rounded-md border border-input bg-card text-xs font-semibold"
+                                >
+                                  {i + 1}
+                                </div>
+                              ))}
+                            </div>
+                            <div className="flex justify-between text-[10px] text-muted-foreground px-0.5">
+                              <span>{q.ratingMinLabel || '1'}</span>
+                              <span>{q.ratingMaxLabel || `${q.ratingMax || 5}`}</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1">
+                            {Array.from({ length: q.ratingMax || 5 }, (_, i) => (
+                              <StarIcon key={i} size={18} className="text-warning fill-warning/20" />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {q.type === 'ranking' && (
+                      <div className="space-y-1.5 pt-1">
+                        {(q.options || []).map((item, itemIdx) => (
+                          <div
+                            key={itemIdx}
+                            className="flex items-center gap-2 p-2 rounded-lg border border-border-subtle bg-card text-xs font-medium"
+                          >
+                            <span className="h-4 w-4 rounded bg-muted flex items-center justify-center text-[10px] font-bold text-muted-foreground">
+                              {itemIdx + 1}
+                            </span>
+                            <span>{item}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {q.type === 'file-upload' && (
+                      <div className="rounded-lg border border-dashed border-border bg-card p-3 text-center space-y-1">
+                        <UploadCloudIcon size={18} className="mx-auto text-primary" />
+                        <p className="text-xs text-foreground font-medium">Click or drag file to upload</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          Max size: {q.maxFileSizeMb || 10}MB
+                        </p>
+                      </div>
+                    )}
+
+                    {q.type === 'number' && (
+                      <div className="h-9 w-full rounded-md border border-input bg-card px-3 py-2 text-xs text-muted-foreground">
+                        {q.placeholder || '12345...'}
+                      </div>
+                    )}
+
+                    {q.type === 'date' && (
+                      <div className="h-9 w-full rounded-md border border-input bg-card px-3 py-2 text-xs text-muted-foreground flex items-center justify-between">
+                        <span>YYYY-MM-DD</span>
+                        <CalendarIcon size={14} />
+                      </div>
+                    )}
+
+                    {q.type === 'email' && (
+                      <div className="h-9 w-full rounded-md border border-input bg-card px-3 py-2 text-xs text-muted-foreground flex items-center justify-between">
+                        <span>{q.placeholder || 'name@example.com'}</span>
+                        <MailIcon size={14} />
                       </div>
                     )}
                   </div>
@@ -242,6 +531,8 @@ function SortableQuestionItem({
   index,
   onUpdateLabel,
   onChangeType,
+  onToggleRequired,
+  onUpdateQuestion,
   onDelete,
   onAddOption,
   onUpdateOption,
@@ -250,7 +541,9 @@ function SortableQuestionItem({
   question: Question;
   index: number;
   onUpdateLabel: (id: string, label: string) => void;
-  onChangeType: (id: string, type: 'text' | 'multiple-choice') => void;
+  onChangeType: (id: string, type: QuestionType) => void;
+  onToggleRequired: (id: string) => void;
+  onUpdateQuestion: (id: string, updates: Partial<Question>) => void;
   onDelete: (id: string) => void;
   onAddOption: (id: string) => void;
   onUpdateOption: (id: string, index: number, val: string) => void;
@@ -266,10 +559,13 @@ function SortableQuestionItem({
     opacity: isDragging ? 0.6 : 1,
   };
 
+  const hasOptions = ['multiple-choice', 'checkbox', 'dropdown', 'ranking'].includes(question.type);
+
   return (
     <Card ref={setNodeRef} style={style} className="overflow-hidden">
       <CardContent className="p-4 sm:p-5 space-y-4">
-        <div className="flex items-center justify-between gap-3">
+        {/* Header: Drag handle, index, type select, required switch, delete */}
+        <div className="flex flex-wrap items-center justify-between gap-2.5">
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -286,15 +582,48 @@ function SortableQuestionItem({
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Question Type Selector */}
             <select
               value={question.type}
-              onChange={(e) => onChangeType(question.id, e.target.value as 'text' | 'multiple-choice')}
+              onChange={(e) => onChangeType(question.id, e.target.value as QuestionType)}
               className="h-8 rounded-md border border-input bg-card px-2 text-xs font-medium text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
-              <option value="text">Short Answer</option>
-              <option value="multiple-choice">Multiple Choice</option>
+              <optgroup label="Text">
+                <option value="text">Short Answer</option>
+                <option value="paragraph">Paragraph</option>
+              </optgroup>
+              <optgroup label="Selection">
+                <option value="multiple-choice">Multiple Choice</option>
+                <option value="checkbox">Checkboxes</option>
+                <option value="dropdown">Dropdown</option>
+              </optgroup>
+              <optgroup label="Rating & Order">
+                <option value="rating">Rating Scale</option>
+                <option value="ranking">Ranking Order</option>
+              </optgroup>
+              <optgroup label="Inputs & Media">
+                <option value="file-upload">File Upload</option>
+                <option value="number">Number</option>
+                <option value="date">Date</option>
+                <option value="email">Email</option>
+              </optgroup>
             </select>
 
+            {/* Required Toggle */}
+            <button
+              type="button"
+              onClick={() => onToggleRequired(question.id)}
+              className={`h-8 px-2.5 rounded-md text-xs font-medium border transition-colors flex items-center gap-1.5 ${
+                question.required
+                  ? 'border-primary bg-primary/10 text-primary'
+                  : 'border-input bg-card text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <span>Required</span>
+              {question.required && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
+            </button>
+
+            {/* Delete button */}
             <Button
               type="button"
               variant="ghost"
@@ -308,25 +637,119 @@ function SortableQuestionItem({
           </div>
         </div>
 
-        <div className="space-y-1.5">
+        {/* Question Label with Markdown Helper */}
+        <div className="space-y-1">
           <Input
-            placeholder="Type your question here..."
+            placeholder="Type your question here... (Supports **bold**, *italic*, - lists)"
             value={question.label}
             onChange={(e) => onUpdateLabel(question.id, e.target.value)}
-            className="font-medium"
+            className="font-medium text-sm"
           />
+          <p className="text-[10px] text-muted-foreground ps-1">
+            Markdown enabled: <code className="text-foreground">**bold**</code>, <code className="text-foreground">*italic*</code>, <code className="text-foreground">- list</code>
+          </p>
         </div>
 
-        {question.type === 'multiple-choice' && (
+        {/* Optional Placeholder for text/number/email */}
+        {['text', 'paragraph', 'number', 'email'].includes(question.type) && (
+          <div className="space-y-1 ps-2 border-s-2 border-border-subtle">
+            <Input
+              placeholder="Custom input placeholder (optional)..."
+              value={question.placeholder || ''}
+              onChange={(e) => onUpdateQuestion(question.id, { placeholder: e.target.value })}
+              className="h-8 text-xs text-muted-foreground"
+            />
+          </div>
+        )}
+
+        {/* Rating Configuration */}
+        {question.type === 'rating' && (
+          <div className="space-y-3 ps-2 border-s-2 border-border-subtle pt-1">
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[11px] font-semibold text-muted-foreground">Rating Style</label>
+                <select
+                  value={question.ratingStyle || 'stars'}
+                  onChange={(e) =>
+                    onUpdateQuestion(question.id, { ratingStyle: e.target.value as 'stars' | 'linear-scale' })
+                  }
+                  className="mt-1 h-8 w-full rounded-md border border-input bg-card px-2 text-xs font-medium"
+                >
+                  <option value="stars">Star Rating</option>
+                  <option value="linear-scale">Linear Scale</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-[11px] font-semibold text-muted-foreground">Maximum Value</label>
+                <select
+                  value={question.ratingMax || 5}
+                  onChange={(e) => onUpdateQuestion(question.id, { ratingMax: Number(e.target.value) })}
+                  className="mt-1 h-8 w-full rounded-md border border-input bg-card px-2 text-xs font-medium"
+                >
+                  <option value="5">1 to 5</option>
+                  <option value="10">1 to 10</option>
+                </select>
+              </div>
+            </div>
+
+            {question.ratingStyle === 'linear-scale' && (
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <div>
+                  <label className="text-[11px] font-semibold text-muted-foreground">Min Label (e.g. Poor)</label>
+                  <Input
+                    placeholder="Not likely"
+                    value={question.ratingMinLabel || ''}
+                    onChange={(e) => onUpdateQuestion(question.id, { ratingMinLabel: e.target.value })}
+                    className="h-8 text-xs mt-1"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-semibold text-muted-foreground">Max Label (e.g. Excellent)</label>
+                  <Input
+                    placeholder="Very likely"
+                    value={question.ratingMaxLabel || ''}
+                    onChange={(e) => onUpdateQuestion(question.id, { ratingMaxLabel: e.target.value })}
+                    className="h-8 text-xs mt-1"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* File Upload Configuration */}
+        {question.type === 'file-upload' && (
+          <div className="space-y-2 ps-2 border-s-2 border-border-subtle pt-1">
+            <label className="text-[11px] font-semibold text-muted-foreground">
+              Max File Size (MB)
+            </label>
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                min={1}
+                max={50}
+                value={question.maxFileSizeMb || 10}
+                onChange={(e) => onUpdateQuestion(question.id, { maxFileSizeMb: Number(e.target.value) || 10 })}
+                className="h-8 w-28 text-xs"
+              />
+              <span className="text-xs text-muted-foreground">MB (Default: 10MB)</span>
+            </div>
+          </div>
+        )}
+
+        {/* Options / Ranking Items Editor */}
+        {hasOptions && (
           <div className="space-y-2.5 ps-2 border-s-2 border-border-subtle pt-1">
-            <label className="text-xs font-semibold text-muted-foreground">Options</label>
+            <label className="text-xs font-semibold text-muted-foreground">
+              {question.type === 'ranking' ? 'Items to Rank (Drag order preview)' : 'Options'}
+            </label>
             {(question.options || []).map((option, optIdx) => (
               <div key={optIdx} className="flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-muted-foreground/50 shrink-0" />
                 <Input
                   value={option}
                   onChange={(e) => onUpdateOption(question.id, optIdx, e.target.value)}
-                  placeholder={`Option ${optIdx + 1}`}
+                  placeholder={`${question.type === 'ranking' ? 'Item' : 'Option'} ${optIdx + 1}`}
                   className="h-9 text-xs"
                 />
                 <button
@@ -347,7 +770,7 @@ function SortableQuestionItem({
               className="h-8 text-xs text-primary font-medium ps-0 hover:bg-transparent hover:underline"
             >
               <PlusIcon size={14} aria-hidden="true" />
-              <span>Add Option</span>
+              <span>Add {question.type === 'ranking' ? 'Item' : 'Option'}</span>
             </Button>
           </div>
         )}

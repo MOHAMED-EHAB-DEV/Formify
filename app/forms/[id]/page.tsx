@@ -58,6 +58,7 @@ export default async function PublicFormPage({
         description: form.description,
         questions: form.questions,
         status: form.status,
+        closeDate: form.closeDate,
         creator: creator ? { name: creator.name, email: creator.email } : undefined,
       }}
       isOwner={isOwner}

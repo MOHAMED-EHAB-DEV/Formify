@@ -105,7 +105,7 @@ export function SigninCard({ initialMode = 'sign-in' }: { initialMode?: 'sign-in
   };
 
   return (
-    <div className="w-full max-w-[420px] rounded-2xl border border-border bg-card p-6 sm:p-8 shadow-sm transition-all animate-fade-in">
+    <div className="w-full max-w-105 rounded-2xl border border-border bg-card p-6 sm:p-8 shadow-sm transition-all animate-fade-in">
       <div className="flex flex-col items-center text-center">
         <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
           <Image src="/assets/icons/icon.svg" alt="Formify" width={32} height={32} priority />

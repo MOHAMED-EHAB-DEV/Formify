@@ -1101,3 +1101,173 @@ export function MailIcon({ size = 20, title, className, ...props }: IconProps) {
   );
 }
 
+export function StarIcon({ size = 20, title, className, fill = 'none', ...props }: IconProps & { fill?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill={fill}
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden={title ? undefined : 'true'}
+      role={title ? 'img' : undefined}
+      className={className}
+      {...props}
+    >
+      {title ? <title>{title}</title> : null}
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </svg>
+  );
+}
+
+export function CalendarIcon({ size = 20, title, className, ...props }: IconProps) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden={title ? undefined : 'true'}
+      role={title ? 'img' : undefined}
+      className={className}
+      {...props}
+    >
+      {title ? <title>{title}</title> : null}
+      <path d="M8 2v4M16 2v4M3 10h18" />
+      <rect width="18" height="18" x="3" y="4" rx="2" />
+    </svg>
+  );
+}
+
+export function UploadCloudIcon({ size = 20, title, className, ...props }: IconProps) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden={title ? undefined : 'true'}
+      role={title ? 'img' : undefined}
+      className={className}
+      {...props}
+    >
+      {title ? <title>{title}</title> : null}
+      <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242" />
+      <path d="M12 12v9M16 16l-4-4-4 4" />
+    </svg>
+  );
+}
+
+export function HashIcon({ size = 20, title, className, ...props }: IconProps) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden={title ? undefined : 'true'}
+      role={title ? 'img' : undefined}
+      className={className}
+      {...props}
+    >
+      {title ? <title>{title}</title> : null}
+      <line x1="4" x2="20" y1="9" y2="9" />
+      <line x1="4" x2="20" y1="15" y2="15" />
+      <line x1="10" x2="8" y1="3" y2="21" />
+      <line x1="16" x2="14" y1="3" y2="21" />
+    </svg>
+  );
+}
+
+export function CheckSquareIcon({ size = 20, title, className, ...props }: IconProps) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden={title ? undefined : 'true'}
+      role={title ? 'img' : undefined}
+      className={className}
+      {...props}
+    >
+      {title ? <title>{title}</title> : null}
+      <path d="m9 11 3 3L22 4" />
+      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+    </svg>
+  );
+}
+
+export function MoveIcon({ size = 20, title, className, ...props }: IconProps) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden={title ? undefined : 'true'}
+      role={title ? 'img' : undefined}
+      className={className}
+      {...props}
+    >
+      {title ? <title>{title}</title> : null}
+      <path d="m5 9-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20" />
+    </svg>
+  );
+}
+
+export function ArrowRightIcon({ size = 20, title, className, ...props }: IconProps) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden={title ? undefined : 'true'}
+      role={title ? 'img' : undefined}
+      className={className}
+      {...props}
+    >
+      {title ? <title>{title}</title> : null}
+      <path d="M5 12h14" />
+      <path d="m12 5 7 7-7 7" />
+    </svg>
+  );
+}
+
+
+

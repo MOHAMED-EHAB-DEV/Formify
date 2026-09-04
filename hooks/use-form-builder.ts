@@ -15,13 +15,19 @@ interface InitialFormData {
   description?: string;
   questions?: Question[];
   status?: FormStatus;
+  closeDate?: Date | string | null;
 }
+
+const OPTION_BASED_TYPES: QuestionType[] = ['multiple-choice', 'checkbox', 'dropdown', 'ranking'];
 
 export function useFormBuilder(initialData?: InitialFormData) {
   const router = useRouter();
 
   const [title, setTitle] = useState(initialData?.title || '');
   const [description, setDescription] = useState(initialData?.description || '');
+  const [closeDate, setCloseDate] = useState<string>(
+    initialData?.closeDate ? new Date(initialData.closeDate).toISOString().slice(0, 16) : ''
+  );
   const [questions, setQuestions] = useState<Question[]>(
     initialData?.questions && initialData.questions.length > 0
       ? initialData.questions
@@ -30,22 +36,41 @@ export function useFormBuilder(initialData?: InitialFormData) {
             id: nanoid(10),
             type: 'text',
             label: '',
-            options: undefined,
+            required: false,
           },
         ]
   );
   const [isSaving, setIsSaving] = useState(false);
 
   const addQuestion = useCallback((type: QuestionType) => {
-    setQuestions((prev) => [
-      ...prev,
-      {
-        id: nanoid(10),
-        type,
-        label: '',
-        options: type === 'multiple-choice' ? ['Option 1', 'Option 2'] : undefined,
-      },
-    ]);
+    setQuestions((prev) => {
+      const isOptionBased = OPTION_BASED_TYPES.includes(type);
+      const isRanking = type === 'ranking';
+      const isRating = type === 'rating';
+      const isFileUpload = type === 'file-upload';
+
+      return [
+        ...prev,
+        {
+          id: nanoid(10),
+          type,
+          label: '',
+          required: false,
+          placeholder: '',
+          options: isRanking
+            ? ['Item 1', 'Item 2', 'Item 3']
+            : isOptionBased
+            ? ['Option 1', 'Option 2']
+            : undefined,
+          ratingStyle: isRating ? 'stars' : undefined,
+          ratingMax: isRating ? 5 : undefined,
+          ratingMinLabel: isRating ? '' : undefined,
+          ratingMaxLabel: isRating ? '' : undefined,
+          maxFileSizeMb: isFileUpload ? 10 : undefined,
+          allowedFileTypes: isFileUpload ? [] : undefined,
+        },
+      ];
+    });
   }, []);
 
   const deleteQuestion = useCallback((id: string) => {
@@ -58,21 +83,38 @@ export function useFormBuilder(initialData?: InitialFormData) {
     });
   }, []);
 
+  const updateQuestion = useCallback((id: string, updates: Partial<Question>) => {
+    setQuestions((prev) => prev.map((q) => (q.id === id ? { ...q, ...updates } : q)));
+  }, []);
+
   const updateQuestionLabel = useCallback((id: string, label: string) => {
     setQuestions((prev) => prev.map((q) => (q.id === id ? { ...q, label } : q)));
   }, []);
 
+  const toggleQuestionRequired = useCallback((id: string) => {
+    setQuestions((prev) => prev.map((q) => (q.id === id ? { ...q, required: !q.required } : q)));
+  }, []);
+
   const changeQuestionType = useCallback((id: string, type: QuestionType) => {
     setQuestions((prev) =>
-      prev.map((q) =>
-        q.id === id
-          ? {
-              ...q,
-              type,
-              options: type === 'multiple-choice' ? (q.options?.length ? q.options : ['Option 1', 'Option 2']) : undefined,
-            }
-          : q
-      )
+      prev.map((q) => {
+        if (q.id !== id) return q;
+
+        const isTargetOptionBased = OPTION_BASED_TYPES.includes(type);
+        const existingOptions = q.options?.length ? q.options : ['Option 1', 'Option 2'];
+
+        return {
+          ...q,
+          type,
+          options: isTargetOptionBased ? existingOptions : undefined,
+          ratingStyle: type === 'rating' ? q.ratingStyle || 'stars' : undefined,
+          ratingMax: type === 'rating' ? q.ratingMax || 5 : undefined,
+          ratingMinLabel: type === 'rating' ? q.ratingMinLabel || '' : undefined,
+          ratingMaxLabel: type === 'rating' ? q.ratingMaxLabel || '' : undefined,
+          maxFileSizeMb: type === 'file-upload' ? q.maxFileSizeMb || 10 : undefined,
+          allowedFileTypes: type === 'file-upload' ? q.allowedFileTypes || [] : undefined,
+        };
+      })
     );
   }, []);
 
@@ -80,9 +122,10 @@ export function useFormBuilder(initialData?: InitialFormData) {
     setQuestions((prev) =>
       prev.map((q) => {
         if (q.id !== questionId || !q.options) return q;
+        const prefix = q.type === 'ranking' ? 'Item' : 'Option';
         return {
           ...q,
-          options: [...q.options, `Option ${q.options.length + 1}`],
+          options: [...q.options, `${prefix} ${q.options.length + 1}`],
         };
       })
     );
@@ -106,8 +149,12 @@ export function useFormBuilder(initialData?: InitialFormData) {
     setQuestions((prev) =>
       prev.map((q) => {
         if (q.id !== questionId || !q.options) return q;
+        if (q.options.length <= 2 && q.type === 'ranking') {
+          toast.error('Ranking question must have at least 2 items');
+          return q;
+        }
         if (q.options.length <= 1) {
-          toast.error('Multiple choice question must have at least one option');
+          toast.error('Question must have at least one option');
           return q;
         }
         return {
@@ -149,11 +196,21 @@ export function useFormBuilder(initialData?: InitialFormData) {
         title: title.trim(),
         description: description.trim(),
         status,
+        closeDate: closeDate ? new Date(closeDate).toISOString() : null,
         questions: questions.map((q) => ({
           id: q.id,
           type: q.type,
           label: q.label.trim(),
+          description: q.description?.trim() || '',
+          required: Boolean(q.required),
+          placeholder: q.placeholder?.trim() || '',
           options: q.options?.map((opt) => opt.trim()).filter(Boolean),
+          ratingStyle: q.ratingStyle,
+          ratingMax: q.ratingMax,
+          ratingMinLabel: q.ratingMinLabel?.trim(),
+          ratingMaxLabel: q.ratingMaxLabel?.trim(),
+          maxFileSizeMb: q.maxFileSizeMb,
+          allowedFileTypes: q.allowedFileTypes,
         })),
       });
 
@@ -176,11 +233,15 @@ export function useFormBuilder(initialData?: InitialFormData) {
     setTitle,
     description,
     setDescription,
+    closeDate,
+    setCloseDate,
     questions,
     isSaving,
     addQuestion,
     deleteQuestion,
+    updateQuestion,
     updateQuestionLabel,
+    toggleQuestionRequired,
     changeQuestionType,
     addOption,
     updateOption,

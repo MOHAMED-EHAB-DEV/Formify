@@ -14,7 +14,7 @@ export interface IEventDocument extends Document {
 const eventSchema = new Schema<IEventDocument>({
   type: {
     type: String,
-    enum: ['form_created', 'form_updated', 'form_submitted', 'form_deleted'],
+    enum: ['form_created', 'form_updated', 'form_submitted', 'form_deleted', 'responses_purged'],
     required: true,
   },
   formId: {

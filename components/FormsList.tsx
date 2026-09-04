@@ -154,7 +154,9 @@ export function FormsList({ initialForms }: { initialForms: Form[] }) {
                 <div className="flex items-start justify-between gap-2">
                   <Badge
                     variant={
-                      form.status === 'published'
+                      form.closeDate && new Date() > new Date(form.closeDate)
+                        ? 'warning'
+                        : form.status === 'published'
                         ? 'success'
                         : form.status === 'archived'
                         ? 'warning'
@@ -162,7 +164,7 @@ export function FormsList({ initialForms }: { initialForms: Form[] }) {
                     }
                     dot
                   >
-                    {camelize(form.status)}
+                    {form.closeDate && new Date() > new Date(form.closeDate) ? 'Expired' : camelize(form.status)}
                   </Badge>
 
                   <Dropdown
@@ -208,11 +210,11 @@ export function FormsList({ initialForms }: { initialForms: Form[] }) {
                   </Dropdown>
                 </div>
 
-                <Link href={`/forms/details/${form.id}`} className="block mt-3 space-y-1">
-                  <h3 className="text-base font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-1">
+                <Link href={`/forms/details/${form.id}`} className="block group">
+                  <h3 className="font-semibold text-foreground tracking-tight group-hover:text-primary transition-colors truncate">
                     {form.title}
                   </h3>
-                  <p className="text-xs text-muted-foreground line-clamp-2 min-h-[32px]">
+                  <p className="mt-1 text-xs text-muted-foreground line-clamp-2 min-h-8">
                     {form.description || 'No description provided.'}
                   </p>
                 </Link>
@@ -222,7 +224,7 @@ export function FormsList({ initialForms }: { initialForms: Form[] }) {
                 <div className="flex items-center gap-1.5">
                   <UsersIcon size={14} className="text-primary" />
                   <span className="font-semibold text-foreground">
-                    {form.responses ? form.responses.length : 0}
+                    {form.responsesCount ?? (form.responses ? form.responses.length : 0)}
                   </span>
                   <span>responses</span>
                 </div>

@@ -25,7 +25,7 @@ interface DashboardOverviewProps {
 
 export function DashboardOverview({ username, forms, events }: DashboardOverviewProps) {
   const activeForms = forms.filter((f) => f.status === 'published');
-  const totalSubmissions = forms.reduce((acc, f) => acc + (f.responses?.length || 0), 0);
+  const totalSubmissions = forms.reduce((acc, f) => acc + (f.responsesCount ?? f.responses?.length ?? 0), 0);
   const completionRate =
     activeForms.length > 0 ? `${Math.min(100, Math.round((totalSubmissions / (activeForms.length * 5 || 1)) * 100))}%` : '0%';
 
@@ -42,6 +42,8 @@ export function DashboardOverview({ username, forms, events }: DashboardOverview
         return `New response received for "${event.formTitle}"`;
       case 'form_deleted':
         return `${actor} deleted form "${event.formTitle}"`;
+      case 'responses_purged':
+        return `System purged ${event.metadata?.purgedCount ?? ''} expired responses (>90d) and archived "${event.formTitle}"`;
       default:
         return `${actor} performed an action`;
     }
@@ -165,7 +167,7 @@ export function DashboardOverview({ username, forms, events }: DashboardOverview
 
                   <div className="flex items-center gap-4 text-xs text-muted-foreground shrink-0">
                     <span className="font-semibold text-foreground">
-                      {form.responses ? form.responses.length : 0} resps
+                      {form.responsesCount ?? (form.responses ? form.responses.length : 0)} resps
                     </span>
                     <ChevronRightIcon size={16} className="text-muted-foreground group-hover:text-primary transition-transform group-hover:translate-x-0.5" />
                   </div>
@@ -202,7 +204,7 @@ export function DashboardOverview({ username, forms, events }: DashboardOverview
                 <ol className="relative border-s border-border-subtle ms-3 space-y-4">
                   {events.map((event) => (
                     <li key={event.id} className="ms-4">
-                      <div className="absolute -start-1.5 mt-1.5 h-3 w-3 rounded-full border border-card bg-primary" />
+                      <div className="absolute -inset-s-1.5 mt-1.5 h-3 w-3 rounded-full border border-card bg-primary" />
                       <p className="text-xs font-medium text-foreground leading-snug">
                         {getEventDescription(event)}
                       </p>
