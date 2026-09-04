@@ -160,9 +160,10 @@ export function FormBuilder({ initialData }: FormBuilderProps) {
                     <label htmlFor="close-date" className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                       <ClockIcon size={14} className="text-primary" />
                       <span>Form Close Date / Expiration</span>
+                      <span className="text-[10px] font-normal text-muted-foreground">(Optional)</span>
                     </label>
                     <p className="text-[11px] text-muted-foreground">
-                      Submissions are automatically rejected once this deadline passes.
+                      Optional — leave blank to keep form open indefinitely. Submissions are rejected after this deadline.
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
