@@ -2,14 +2,16 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/jwt';
 import { AUTH_COOKIE_NAME } from '@/lib/session';
 
-const PROTECTED_ROUTES = ['/dashboard', '/forms', '/settings'];
+const PROTECTED_PREFIXES = ['/dashboard', '/settings', '/forms/builder', '/forms/details', '/forms/edit'];
 const AUTH_ROUTES = ['/sign-in', '/sign-up'];
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get(AUTH_COOKIE_NAME)?.value;
 
-  const isProtected = PROTECTED_ROUTES.some((route) => pathname.startsWith(route));
+  const isProtected =
+    pathname === '/forms' ||
+    PROTECTED_PREFIXES.some((prefix) => pathname.startsWith(prefix));
   const isAuthRoute = AUTH_ROUTES.some((route) => pathname.startsWith(route));
 
   let isAuthenticated = false;
@@ -32,5 +34,14 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/forms/:path*', '/settings/:path*', '/sign-in', '/sign-up'],
+  matcher: [
+    '/dashboard/:path*',
+    '/forms',
+    '/forms/builder/:path*',
+    '/forms/details/:path*',
+    '/forms/edit/:path*',
+    '/settings/:path*',
+    '/sign-in',
+    '/sign-up',
+  ],
 };

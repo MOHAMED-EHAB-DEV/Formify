@@ -124,38 +124,6 @@ export default function SubmitForm({ form, isOwner = false }: SubmitFormProps) {
   const handleNext = () => {
     if (!currentQuestion) return;
 
-    const currentAnswer = answers[currentQuestion.id];
-
-    // Enforce required validation
-    if (currentQuestion.required) {
-      if (
-        currentAnswer === undefined ||
-        currentAnswer === null ||
-        (typeof currentAnswer === 'string' && !currentAnswer.trim()) ||
-        (Array.isArray(currentAnswer) && currentAnswer.length === 0)
-      ) {
-        toast.error('Please answer this required question before continuing');
-        return;
-      }
-    }
-
-    // Specific format validation if answered
-    if (typeof currentAnswer === 'string' && currentAnswer.trim()) {
-      if (currentQuestion.type === 'email') {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(currentAnswer.trim())) {
-          toast.error('Please enter a valid email address');
-          return;
-        }
-      }
-      if (currentQuestion.type === 'number') {
-        if (isNaN(Number(currentAnswer))) {
-          toast.error('Please enter a valid numeric value');
-          return;
-        }
-      }
-    }
-
     if (currentStep < totalSteps - 1) {
       setCurrentStep((prev) => prev + 1);
     } else {
@@ -370,11 +338,11 @@ export default function SubmitForm({ form, isOwner = false }: SubmitFormProps) {
                           className="sr-only"
                         />
                         <span
-                          className={`flex h-5 w-5 items-center justify-center rounded-full border transition-all ${
+                          className={`flex h-5 w-5 items-center justify-center rounded-md border transition-all ${
                             isSelected ? 'border-primary bg-primary text-primary-foreground' : 'border-muted-foreground/50'
                           }`}
                         >
-                          {isSelected && <span className="h-2 w-2 rounded-full bg-card" />}
+                          {isSelected && <span className="h-2 w-2 rounded-xs bg-card" />}
                         </span>
                         <span className="text-sm font-medium text-foreground">{option}</span>
                       </label>
