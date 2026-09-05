@@ -167,7 +167,7 @@ export function DashboardOverview({ username, forms, events }: DashboardOverview
 
                   <div className="flex items-center gap-4 text-xs text-muted-foreground shrink-0">
                     <span className="font-semibold text-foreground">
-                      {form.responsesCount ?? (form.responses ? form.responses.length : 0)} resps
+                      {form.responsesCount ?? (form.responses ? form.responses.length : 0)} responses
                     </span>
                     <ChevronRightIcon size={16} className="text-muted-foreground group-hover:text-primary transition-transform group-hover:translate-x-0.5" />
                   </div>
