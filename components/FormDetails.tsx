@@ -64,6 +64,149 @@ async function handleDownloadFile(url: string, filename: string) {
   }
 }
 
+function stripMarkdownForCsv(text: string): string {
+  if (!text) return '';
+  return text
+    .replace(/(\*\*|__)(.*?)\1/g, '$2')
+    .replace(/(\*|_)(.*?)\1/g, '$2')
+    .replace(/\[(.*?)\]\(.*?\)/g, '$1')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/[#*~_>]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function formatCsvDateTime(dateVal: Date | string | number | undefined): string {
+  if (!dateVal) return '';
+  const d = new Date(dateVal);
+  if (isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const year = d.getFullYear();
+  const month = pad(d.getMonth() + 1);
+  const day = pad(d.getDate());
+  const hours = pad(d.getHours());
+  const mins = pad(d.getMinutes());
+  const secs = pad(d.getSeconds());
+  return `${year}-${month}-${day} ${hours}:${mins}:${secs}`;
+}
+
+function escapeCsvValue(val: string | number | boolean | null | undefined): string {
+  if (val === null || val === undefined) return '""';
+  let str = String(val);
+
+  // Mitigate CSV Formula Injection in spreadsheet tools
+  if (/^[=+\-@\t\r]/.test(str)) {
+    str = `'${str}`;
+  }
+
+  // Double quotes escaping
+  str = str.replace(/"/g, '""');
+  return `"${str}"`;
+}
+
+function formatAnswerForCsv(
+  answer: AnswerValue | undefined,
+  question: Form['questions'][number]
+): string {
+  if (answer === undefined || answer === null || answer === '') return '';
+
+  if (question.type === 'ranking' && Array.isArray(answer)) {
+    return answer.map((item, idx) => `${idx + 1}. ${item}`).join(' | ');
+  }
+
+  if (Array.isArray(answer)) {
+    return answer.join(', ');
+  }
+
+  if (typeof answer === 'object' && answer !== null) {
+    if ('url' in answer) {
+      const file = answer as FileAnswer;
+      return file.url ? `${file.name || 'file'} (${file.url})` : '';
+    }
+  }
+
+  if (question.type === 'rating' && typeof answer === 'number') {
+    return `${answer}/${question.ratingMax || 5}`;
+  }
+
+  return String(answer).trim();
+}
+
+function exportResponsesToCSV(
+  formTitle: string,
+  questions: Form['questions'],
+  responsesList: FormResponse[]
+) {
+  if (!responsesList.length) {
+    toast.error('No responses available to export');
+    return;
+  }
+
+  // 1. Column Headers
+  const headers = [
+    'Submission #',
+    'Submission Date (Local)',
+    'Submission Date (UTC)',
+    ...questions.map((q, idx) => {
+      const cleanLabel = stripMarkdownForCsv(q.label) || `Question ${idx + 1}`;
+      let typeIndicator = '';
+      if (q.type === 'rating') typeIndicator = ` [Rating /${q.ratingMax || 5}]`;
+      else if (q.type === 'ranking') typeIndicator = ' [Ranking]';
+      else if (q.type === 'file-upload') typeIndicator = ' [File]';
+      else if (q.type === 'checkbox') typeIndicator = ' [Multi-Choice]';
+      return `${cleanLabel}${typeIndicator}`;
+    }),
+  ];
+  const headerRow = headers.map(escapeCsvValue).join(',');
+
+  // 2. Sort chronologically (earliest to latest: #1 is first submission)
+  const sortedResponses = [...responsesList].sort((a, b) => {
+    const timeA = a.submittedAt ? new Date(a.submittedAt).getTime() : 0;
+    const timeB = b.submittedAt ? new Date(b.submittedAt).getTime() : 0;
+    return timeA - timeB;
+  });
+
+  // 3. Data Rows
+  const rows = sortedResponses.map((resItem, index) => {
+    const rowNum = index + 1;
+    const localDate = formatCsvDateTime(resItem.submittedAt);
+    const utcDate = resItem.submittedAt ? new Date(resItem.submittedAt).toISOString() : '';
+
+    const answers = questions.map((q) => {
+      const matched = resItem.answers?.find((a) => a.questionId === q.id);
+      return formatAnswerForCsv(matched?.answer, q);
+    });
+
+    return [
+      escapeCsvValue(rowNum),
+      escapeCsvValue(localDate),
+      escapeCsvValue(utcDate),
+      ...answers.map(escapeCsvValue),
+    ].join(',');
+  });
+
+  // 4. Build CSV with UTF-8 BOM for Excel & CRLF line breaks
+  const csvBody = '\uFEFF' + [headerRow, ...rows].join('\r\n');
+  const blob = new Blob([csvBody], { type: 'text/csv;charset=utf-8;' });
+  const downloadUrl = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+
+  const dateStamp = new Date().toISOString().slice(0, 10);
+  const cleanTitle = (formTitle || 'form')
+    .replace(/[^a-zA-Z0-9_-]/g, '_')
+    .replace(/_+/g, '_')
+    .slice(0, 30);
+
+  link.href = downloadUrl;
+  link.setAttribute('download', `${cleanTitle}_responses_${dateStamp}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(downloadUrl);
+
+  toast.success(`Exported ${sortedResponses.length} responses to CSV`);
+}
+
 export function FormDetails({ form }: { form: Form }) {
   const router = useRouter();
 
@@ -188,6 +331,18 @@ export function FormDetails({ form }: { form: Form }) {
             </Button>
           </Link>
 
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => exportResponsesToCSV(form.title, form.questions, responses)}
+            disabled={totalResponses === 0}
+            title={totalResponses === 0 ? 'No responses yet' : 'Export responses to CSV'}
+          >
+            <DownloadIcon size={16} aria-hidden="true" />
+            <span className="hidden sm:inline">Export CSV</span>
+          </Button>
+
           <Dropdown
             trigger={
               <button
@@ -199,6 +354,14 @@ export function FormDetails({ form }: { form: Form }) {
               </button>
             }
           >
+            <DropdownItem
+              onClick={() => exportResponsesToCSV(form.title, form.questions, responses)}
+              disabled={totalResponses === 0}
+            >
+              <DownloadIcon size={16} />
+              <span>Export CSV</span>
+            </DropdownItem>
+            <DropdownSeparator />
             <DropdownItem onClick={() => router.push(`/forms/edit/${form.id}`)}>
               <PencilIcon size={16} />
               <span>Edit Questions</span>
@@ -586,7 +749,20 @@ export function FormDetails({ form }: { form: Form }) {
         <TabsContent value="individuals">
           <Card>
             <CardContent className="p-5 sm:p-6 space-y-4">
-              <h3 className="text-base font-semibold text-foreground">Individual Responses</h3>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <h3 className="text-base font-semibold text-foreground">Individual Responses</h3>
+                {totalResponses > 0 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => exportResponsesToCSV(form.title, form.questions, responses)}
+                  >
+                    <DownloadIcon size={14} aria-hidden="true" />
+                    <span>Download CSV</span>
+                  </Button>
+                )}
+              </div>
 
               {totalResponses > 0 ? (
                 <>
